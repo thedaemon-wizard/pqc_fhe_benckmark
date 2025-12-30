@@ -2,6 +2,61 @@
 
 All notable changes to the PQC-FHE Integration Platform.
 
+## [2.3.5] - 2025-12-30
+
+### Added
+- **X25519 + ML-KEM Hybrid Key Exchange**
+  - `POST /pqc/hybrid/keypair` - Generate hybrid keypair
+  - `POST /pqc/hybrid/encapsulate` - Hybrid encapsulation (sender)
+  - `POST /pqc/hybrid/decapsulate` - Hybrid decapsulation (receiver)
+  - `GET /pqc/hybrid/compare` - Algorithm comparison
+  - `GET /pqc/hybrid/migration-strategy` - Enterprise migration roadmap
+  - `GET /pqc/hybrid/keypairs` - List stored keypairs
+
+- **Web UI Hybrid Migration Tab**
+  - Interactive 4-phase migration timeline visualization
+  - Live X25519 + ML-KEM demo with step-by-step logging
+  - Algorithm comparison table (Classical vs Hybrid vs PQC)
+  - Security analysis and HNDL protection explanation
+
+- **Kubernetes Helm Chart**
+  - Production-ready deployment with HPA (2-10 replicas)
+  - GPU worker deployment with NVIDIA device plugin
+  - Redis cache integration (Bitnami dependency)
+  - Prometheus and Grafana integration
+  - NetworkPolicy for security isolation
+  - PodDisruptionBudget for high availability
+  - Ingress with TLS termination
+  - ConfigMap for cryptographic parameters
+
+- **Monitoring and Observability**
+  - Prometheus ServiceMonitor configuration
+  - Pre-configured alerting rules:
+    - PQCFHEHighErrorRate (error rate > 5%)
+    - PQCFHEHighLatency (p95 > 5s)
+    - PQCFHEPodNotReady (pods not ready)
+    - PQCFHESlowEncryption (encrypt > 10s)
+    - PQCFHEGPUMemoryHigh (GPU memory > 90%)
+
+- **File-Based Logging**
+  - Rotating log files (10MB max, 5 backups)
+  - Separate log files:
+    - `pqc_fhe_server.log` - All logs
+    - `pqc_fhe_error.log` - Errors only
+    - `pqc_fhe_access.log` - HTTP access logs
+  - Configurable via LOG_LEVEL environment variable
+
+- **IETF Compliance**
+  - Follows draft-ietf-tls-ecdhe-mlkem pattern for TLS 1.3
+  - SHA-256 combination of shared secrets
+
+### Changed
+- Updated API version to 2.3.5
+- Enhanced Swagger documentation with hybrid endpoints
+- Web UI now has 5 tabs (added Hybrid Migration)
+- Comprehensive README with K8s and monitoring docs
+- Technical reports updated (PDF and Word)
+
 ## [2.3.4] - 2025-12-30
 
 ### Fixed

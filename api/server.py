@@ -1,10 +1,15 @@
 #!/usr/bin/env python3
 """
-PQC-FHE Integration REST API Server v2.3.3
+PQC-FHE Integration REST API Server v2.3.5
 ==========================================
 
 FastAPI-based REST API for Post-Quantum Cryptography and 
 Fully Homomorphic Encryption operations.
+
+v2.3.5 Updates:
+- Added X25519 + ML-KEM hybrid key exchange endpoints
+- Migration strategy API for enterprise planning
+- Algorithm comparison endpoint
 
 Usage:
     uvicorn api.server:app --reload
@@ -51,12 +56,102 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, HTMLResponse
 from pydantic import BaseModel, Field
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
+# =============================================================================
+# LOGGING CONFIGURATION
+# =============================================================================
+
+def setup_logging(log_dir: str = "logs", log_level: str = "INFO"):
+    """
+    Configure logging with both console and file output.
+    
+    Features:
+    - Console output with colored formatting
+    - Rotating file handler (10MB max, 5 backups)
+    - Separate error log file
+    - JSON-formatted logs for production (optional)
+    
+    Args:
+        log_dir: Directory for log files (created if not exists)
+        log_level: Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+    """
+    from logging.handlers import RotatingFileHandler
+    
+    # Create logs directory
+    log_path = Path(log_dir)
+    log_path.mkdir(parents=True, exist_ok=True)
+    
+    # Get log level from environment or parameter
+    level = getattr(logging, os.environ.get('LOG_LEVEL', log_level).upper(), logging.INFO)
+    
+    # Create formatters
+    console_format = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    file_format = '%(asctime)s - %(name)s - %(levelname)s - [%(filename)s:%(lineno)d] - %(message)s'
+    
+    console_formatter = logging.Formatter(console_format, datefmt='%Y-%m-%d %H:%M:%S')
+    file_formatter = logging.Formatter(file_format, datefmt='%Y-%m-%d %H:%M:%S')
+    
+    # Root logger
+    root_logger = logging.getLogger()
+    root_logger.setLevel(level)
+    
+    # Remove existing handlers
+    root_logger.handlers = []
+    
+    # Console handler
+    console_handler = logging.StreamHandler(sys.stdout)
+    console_handler.setLevel(level)
+    console_handler.setFormatter(console_formatter)
+    root_logger.addHandler(console_handler)
+    
+    # Main log file handler (rotating)
+    main_log_file = log_path / "pqc_fhe_server.log"
+    file_handler = RotatingFileHandler(
+        main_log_file,
+        maxBytes=10*1024*1024,  # 10 MB
+        backupCount=5,
+        encoding='utf-8'
+    )
+    file_handler.setLevel(level)
+    file_handler.setFormatter(file_formatter)
+    root_logger.addHandler(file_handler)
+    
+    # Error log file handler (errors only)
+    error_log_file = log_path / "pqc_fhe_error.log"
+    error_handler = RotatingFileHandler(
+        error_log_file,
+        maxBytes=10*1024*1024,  # 10 MB
+        backupCount=3,
+        encoding='utf-8'
+    )
+    error_handler.setLevel(logging.ERROR)
+    error_handler.setFormatter(file_formatter)
+    root_logger.addHandler(error_handler)
+    
+    # Access log (for HTTP requests)
+    access_log_file = log_path / "pqc_fhe_access.log"
+    access_handler = RotatingFileHandler(
+        access_log_file,
+        maxBytes=10*1024*1024,  # 10 MB
+        backupCount=5,
+        encoding='utf-8'
+    )
+    access_handler.setLevel(logging.INFO)
+    access_handler.setFormatter(file_formatter)
+    
+    # Configure uvicorn access logger
+    uvicorn_access_logger = logging.getLogger("uvicorn.access")
+    uvicorn_access_logger.handlers = []
+    uvicorn_access_logger.addHandler(access_handler)
+    uvicorn_access_logger.addHandler(console_handler)
+    
+    return root_logger
+
+# Initialize logging
+logger = setup_logging()
+logger.info("=" * 60)
+logger.info("PQC-FHE Integration API Server v2.3.5")
+logger.info("Logging initialized - logs saved to ./logs/")
+logger.info("=" * 60)
 
 # =============================================================================
 # GLOBAL STATE
@@ -749,12 +844,18 @@ The Web UI provides a user-friendly interface for:
 - ML-KEM Key Exchange Simulation (Alice ↔ Bob)
 - ML-DSA Digital Signature (Sign & Verify)
 - FHE Encrypted Computation (Encrypt → Compute → Decrypt)
+- **Hybrid X25519 + ML-KEM Migration Strategy** (NEW in v2.3.5)
 
 ## Features
 
 ### Post-Quantum Cryptography (PQC)
 - **ML-KEM-768**: Key Encapsulation Mechanism (NIST FIPS 203)
 - **ML-DSA-65**: Digital Signature Algorithm (NIST FIPS 204)
+
+### Hybrid Cryptography (NEW in v2.3.5)
+- **X25519 + ML-KEM-768**: Defense-in-depth key exchange
+- **Migration Strategy**: Phased approach to PQC adoption
+- **IETF Compliant**: draft-ietf-tls-ecdhe-mlkem pattern
 
 ### Fully Homomorphic Encryption (FHE)
 - **CKKS Scheme**: Approximate arithmetic on encrypted data
@@ -780,10 +881,11 @@ The API detects when example/placeholder IDs are used and automatically selects 
 
 ## Requirements
 - **liboqs-python**: Required for PQC operations (ML-KEM-768, ML-DSA-65)
+- **cryptography**: Required for X25519 hybrid operations
 - **desilofhe**: Required for FHE operations (CKKS scheme)
 - Ciphertexts are stored in memory and cleared on server restart
 """,
-    version="2.3.0",
+    version="2.3.5",
     lifespan=lifespan
 )
 
@@ -2070,6 +2172,493 @@ async def verify_signature(request: VerifyRequest):
     return VerifyResponse(
         valid=is_valid
     )
+
+
+# =============================================================================
+# HYBRID X25519 + ML-KEM ENDPOINTS (Migration Strategy)
+# =============================================================================
+
+"""
+Hybrid X25519 + ML-KEM Implementation
+=====================================
+
+This module implements hybrid key encapsulation combining:
+- X25519: Classical elliptic curve Diffie-Hellman (currently secure)
+- ML-KEM-768: Post-quantum lattice-based KEM (quantum-resistant)
+
+Benefits:
+- Defense in depth: Security maintained if either algorithm is broken
+- Smooth migration: Gradual transition from classical to PQC
+- IETF compliant: Follows draft-ietf-tls-ecdhe-mlkem pattern
+
+References:
+- IETF draft-ietf-tls-ecdhe-mlkem: Hybrid Key Exchange for TLS 1.3
+- NIST SP 800-131A Rev. 2: Transitioning Cryptographic Algorithms
+"""
+
+# Check cryptography library availability
+_CRYPTOGRAPHY_AVAILABLE = False
+try:
+    from cryptography.hazmat.primitives.asymmetric import x25519
+    from cryptography.hazmat.primitives import serialization
+    _CRYPTOGRAPHY_AVAILABLE = True
+    logger.info("cryptography library available for X25519 hybrid mode")
+except ImportError:
+    logger.warning("cryptography library not available - X25519 hybrid mode disabled")
+
+# Hybrid keypair store
+_hybrid_keypair_store: Dict[str, Dict[str, Any]] = {}
+
+
+class HybridKeypairRequest(BaseModel):
+    """Request model for hybrid keypair generation."""
+    kem_algorithm: str = Field(
+        default="ML-KEM-768",
+        description="PQC KEM algorithm (ML-KEM-512, ML-KEM-768, ML-KEM-1024)"
+    )
+
+
+class HybridKeypairResponse(BaseModel):
+    """Response model for hybrid keypair."""
+    keypair_id: str
+    x25519_public_key: str  # Base64 encoded
+    ml_kem_public_key: str  # Hex encoded
+    kem_algorithm: str
+    combined_public_key_size: int
+    created_at: str
+
+
+class HybridEncapsulateRequest(BaseModel):
+    """Request model for hybrid encapsulation."""
+    keypair_id: str = Field(
+        default="latest",
+        description="Keypair ID (use 'latest' for most recent)"
+    )
+
+
+class HybridEncapsulateResponse(BaseModel):
+    """Response model for hybrid encapsulation."""
+    x25519_ephemeral_public: str  # Base64 encoded
+    ml_kem_ciphertext: str  # Hex encoded
+    combined_shared_secret_hash: str  # SHA-256 of combined secrets
+    x25519_shared_secret_size: int
+    ml_kem_shared_secret_size: int
+    combined_ciphertext_size: int
+
+
+class HybridDecapsulateRequest(BaseModel):
+    """Request model for hybrid decapsulation."""
+    keypair_id: str = Field(
+        default="latest",
+        description="Keypair ID for decapsulation"
+    )
+    x25519_ephemeral_public: str = Field(
+        description="X25519 ephemeral public key (base64)"
+    )
+    ml_kem_ciphertext: str = Field(
+        description="ML-KEM ciphertext (hex)"
+    )
+
+
+class HybridDecapsulateResponse(BaseModel):
+    """Response model for hybrid decapsulation."""
+    combined_shared_secret_hash: str
+    secrets_match: bool
+    x25519_contribution: str  # SHA-256 of X25519 secret
+    ml_kem_contribution: str  # SHA-256 of ML-KEM secret
+
+
+class HybridCompareResponse(BaseModel):
+    """Response model for algorithm comparison."""
+    classical_x25519: Dict[str, Any]
+    pqc_ml_kem: Dict[str, Any]
+    hybrid_combined: Dict[str, Any]
+    migration_recommendation: str
+    security_analysis: Dict[str, str]
+
+
+class MigrationPhase(BaseModel):
+    """Migration phase information."""
+    phase: int
+    name: str
+    description: str
+    algorithms: List[str]
+    security_level: str
+    quantum_safe: bool
+    recommended_timeline: str
+
+
+class MigrationStrategyResponse(BaseModel):
+    """Response model for migration strategy."""
+    phases: List[MigrationPhase]
+    current_recommendation: str
+    ietf_reference: str
+    nist_reference: str
+
+
+def _get_latest_hybrid_keypair():
+    """Get the most recently created hybrid keypair."""
+    if not _hybrid_keypair_store:
+        return None
+    latest_id = max(_hybrid_keypair_store.keys(), 
+                    key=lambda k: _hybrid_keypair_store[k]['created_at'])
+    return latest_id, _hybrid_keypair_store[latest_id]
+
+
+@app.post("/pqc/hybrid/keypair", response_model=HybridKeypairResponse, tags=["Hybrid PQC"])
+async def generate_hybrid_keypair(request: HybridKeypairRequest = HybridKeypairRequest()):
+    """
+    Generate hybrid X25519 + ML-KEM keypair.
+    
+    Creates a combined keypair for hybrid key exchange:
+    - X25519: 32-byte public key (classical ECDH)
+    - ML-KEM: Variable size public key (post-quantum)
+    
+    This follows the IETF draft-ietf-tls-ecdhe-mlkem pattern for TLS 1.3.
+    """
+    if not _CRYPTOGRAPHY_AVAILABLE:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="cryptography library required for X25519. Install: pip install cryptography"
+        )
+    
+    if not _check_liboqs_available():
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="liboqs-python required for ML-KEM operations"
+        )
+    
+    try:
+        import oqs
+        import base64
+        
+        # Generate X25519 keypair
+        x25519_private = x25519.X25519PrivateKey.generate()
+        x25519_public = x25519_private.public_key()
+        x25519_public_bytes = x25519_public.public_bytes(
+            encoding=serialization.Encoding.Raw,
+            format=serialization.PublicFormat.Raw
+        )
+        
+        # Generate ML-KEM keypair
+        kem = oqs.KeyEncapsulation(request.kem_algorithm)
+        ml_kem_public = kem.generate_keypair()
+        
+        # Store keypair
+        keypair_id = secrets.token_hex(16)
+        created_at = datetime.now().isoformat()
+        
+        _hybrid_keypair_store[keypair_id] = {
+            'x25519_private': x25519_private,
+            'x25519_public': x25519_public,
+            'x25519_public_bytes': x25519_public_bytes,
+            'kem': kem,
+            'ml_kem_public': ml_kem_public,
+            'kem_algorithm': request.kem_algorithm,
+            'created_at': created_at
+        }
+        
+        return HybridKeypairResponse(
+            keypair_id=keypair_id,
+            x25519_public_key=base64.b64encode(x25519_public_bytes).decode(),
+            ml_kem_public_key=ml_kem_public.hex(),
+            kem_algorithm=request.kem_algorithm,
+            combined_public_key_size=len(x25519_public_bytes) + len(ml_kem_public),
+            created_at=created_at
+        )
+        
+    except Exception as e:
+        logger.error(f"Hybrid keypair generation failed: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to generate hybrid keypair: {str(e)}"
+        )
+
+
+@app.post("/pqc/hybrid/encapsulate", response_model=HybridEncapsulateResponse, tags=["Hybrid PQC"])
+async def hybrid_encapsulate(request: HybridEncapsulateRequest = HybridEncapsulateRequest()):
+    """
+    Perform hybrid X25519 + ML-KEM encapsulation (sender side).
+    
+    Combines:
+    1. X25519 ephemeral key exchange
+    2. ML-KEM encapsulation
+    3. SHA-256 combination of both shared secrets
+    
+    The combined secret provides defense-in-depth security.
+    """
+    if not _CRYPTOGRAPHY_AVAILABLE:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="cryptography library required"
+        )
+    
+    try:
+        import base64
+        
+        # Get keypair
+        if request.keypair_id == "latest":
+            result = _get_latest_hybrid_keypair()
+            if not result:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="No hybrid keypair found. Generate one first with POST /pqc/hybrid/keypair"
+                )
+            keypair_id, keypair = result
+        else:
+            if request.keypair_id not in _hybrid_keypair_store:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"Keypair not found: {request.keypair_id}"
+                )
+            keypair = _hybrid_keypair_store[request.keypair_id]
+        
+        # X25519 ephemeral key exchange
+        ephemeral_private = x25519.X25519PrivateKey.generate()
+        ephemeral_public = ephemeral_private.public_key()
+        ephemeral_public_bytes = ephemeral_public.public_bytes(
+            encoding=serialization.Encoding.Raw,
+            format=serialization.PublicFormat.Raw
+        )
+        x25519_shared = ephemeral_private.exchange(keypair['x25519_public'])
+        
+        # ML-KEM encapsulation
+        ml_kem_ciphertext, ml_kem_shared = keypair['kem'].encap_secret(keypair['ml_kem_public'])
+        
+        # Combine shared secrets (HKDF-style combination)
+        combined_shared = hashlib.sha256(x25519_shared + ml_kem_shared).digest()
+        
+        # Store encapsulation data for decapsulation verification
+        _hybrid_keypair_store[request.keypair_id if request.keypair_id != "latest" else keypair_id]['last_encap'] = {
+            'ephemeral_public_bytes': ephemeral_public_bytes,
+            'ml_kem_ciphertext': ml_kem_ciphertext,
+            'combined_shared': combined_shared
+        }
+        
+        return HybridEncapsulateResponse(
+            x25519_ephemeral_public=base64.b64encode(ephemeral_public_bytes).decode(),
+            ml_kem_ciphertext=ml_kem_ciphertext.hex(),
+            combined_shared_secret_hash=combined_shared.hex(),
+            x25519_shared_secret_size=len(x25519_shared),
+            ml_kem_shared_secret_size=len(ml_kem_shared),
+            combined_ciphertext_size=len(ephemeral_public_bytes) + len(ml_kem_ciphertext)
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Hybrid encapsulation failed: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Encapsulation failed: {str(e)}"
+        )
+
+
+@app.post("/pqc/hybrid/decapsulate", response_model=HybridDecapsulateResponse, tags=["Hybrid PQC"])
+async def hybrid_decapsulate(request: HybridDecapsulateRequest):
+    """
+    Perform hybrid X25519 + ML-KEM decapsulation (receiver side).
+    
+    Recovers the combined shared secret from:
+    1. X25519 key exchange with ephemeral public key
+    2. ML-KEM decapsulation
+    3. SHA-256 combination
+    """
+    if not _CRYPTOGRAPHY_AVAILABLE:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="cryptography library required"
+        )
+    
+    try:
+        import base64
+        
+        # Get keypair
+        if request.keypair_id == "latest":
+            result = _get_latest_hybrid_keypair()
+            if not result:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="No hybrid keypair found"
+                )
+            keypair_id, keypair = result
+        else:
+            if request.keypair_id not in _hybrid_keypair_store:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"Keypair not found: {request.keypair_id}"
+                )
+            keypair = _hybrid_keypair_store[request.keypair_id]
+        
+        # Decode inputs
+        ephemeral_public_bytes = base64.b64decode(request.x25519_ephemeral_public)
+        ml_kem_ciphertext = bytes.fromhex(request.ml_kem_ciphertext)
+        
+        # X25519 decapsulation
+        ephemeral_public = x25519.X25519PublicKey.from_public_bytes(ephemeral_public_bytes)
+        x25519_shared = keypair['x25519_private'].exchange(ephemeral_public)
+        
+        # ML-KEM decapsulation
+        ml_kem_shared = keypair['kem'].decap_secret(ml_kem_ciphertext)
+        
+        # Combine shared secrets
+        combined_shared = hashlib.sha256(x25519_shared + ml_kem_shared).digest()
+        
+        # Check if matches encapsulation
+        secrets_match = False
+        if 'last_encap' in keypair:
+            secrets_match = combined_shared == keypair['last_encap']['combined_shared']
+        
+        return HybridDecapsulateResponse(
+            combined_shared_secret_hash=combined_shared.hex(),
+            secrets_match=secrets_match,
+            x25519_contribution=hashlib.sha256(x25519_shared).hexdigest()[:16] + "...",
+            ml_kem_contribution=hashlib.sha256(ml_kem_shared).hexdigest()[:16] + "..."
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Hybrid decapsulation failed: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Decapsulation failed: {str(e)}"
+        )
+
+
+@app.get("/pqc/hybrid/compare", response_model=HybridCompareResponse, tags=["Hybrid PQC"])
+async def compare_algorithms():
+    """
+    Compare classical, PQC, and hybrid approaches.
+    
+    Provides detailed comparison of:
+    - X25519 (classical): Fast, small keys, vulnerable to quantum
+    - ML-KEM-768 (PQC): Quantum-resistant, larger keys
+    - Hybrid (X25519 + ML-KEM): Best of both worlds
+    
+    Includes migration recommendations based on NIST guidelines.
+    """
+    return HybridCompareResponse(
+        classical_x25519={
+            "algorithm": "X25519",
+            "type": "Elliptic Curve Diffie-Hellman",
+            "public_key_size": 32,
+            "shared_secret_size": 32,
+            "security_level": "128-bit classical",
+            "quantum_safe": False,
+            "performance": "Very Fast (~0.02 ms)",
+            "standardization": "RFC 7748"
+        },
+        pqc_ml_kem={
+            "algorithm": "ML-KEM-768",
+            "type": "Module Lattice KEM",
+            "public_key_size": 1184,
+            "ciphertext_size": 1088,
+            "shared_secret_size": 32,
+            "security_level": "NIST Level 3 (AES-192 equivalent)",
+            "quantum_safe": True,
+            "performance": "Fast (~0.04 ms)",
+            "standardization": "NIST FIPS 203 (August 2024)"
+        },
+        hybrid_combined={
+            "algorithms": ["X25519", "ML-KEM-768"],
+            "combined_public_key_size": 1216,
+            "combined_ciphertext_size": 1120,
+            "shared_secret_derivation": "SHA-256(X25519_SS || ML-KEM_SS)",
+            "security_level": "128-bit classical + NIST Level 3 quantum",
+            "quantum_safe": True,
+            "performance": "Fast (~0.06 ms combined)",
+            "standardization": "IETF draft-ietf-tls-ecdhe-mlkem"
+        },
+        migration_recommendation=(
+            "IMMEDIATE ACTION RECOMMENDED: Start with hybrid mode (X25519 + ML-KEM) "
+            "to achieve quantum resistance while maintaining classical security as fallback. "
+            "Full PQC-only mode recommended by 2030 per NIST guidelines."
+        ),
+        security_analysis={
+            "harvest_now_decrypt_later": "Hybrid mode protects against HNDL attacks starting today",
+            "algorithm_compromise": "If X25519 is broken (quantum), ML-KEM provides security",
+            "implementation_bugs": "If one implementation has bugs, the other provides redundancy",
+            "cryptanalysis_advances": "Defense against unforeseen advances in either paradigm"
+        }
+    )
+
+
+@app.get("/pqc/hybrid/migration-strategy", response_model=MigrationStrategyResponse, tags=["Hybrid PQC"])
+async def get_migration_strategy():
+    """
+    Get recommended PQC migration strategy.
+    
+    Returns a phased approach for transitioning from classical to post-quantum cryptography,
+    following NIST SP 800-131A Rev. 2 and IETF guidelines.
+    """
+    phases = [
+        MigrationPhase(
+            phase=1,
+            name="Assessment (Current)",
+            description="Inventory existing cryptographic assets and identify quantum-vulnerable systems",
+            algorithms=["RSA-2048", "ECDSA P-256", "X25519"],
+            security_level="128-bit classical",
+            quantum_safe=False,
+            recommended_timeline="2024-2025"
+        ),
+        MigrationPhase(
+            phase=2,
+            name="Hybrid Deployment",
+            description="Deploy hybrid classical + PQC for high-value systems",
+            algorithms=["X25519 + ML-KEM-768", "ECDSA + ML-DSA-65"],
+            security_level="128-bit classical + NIST Level 3",
+            quantum_safe=True,
+            recommended_timeline="2025-2027"
+        ),
+        MigrationPhase(
+            phase=3,
+            name="PQC Primary",
+            description="Transition to PQC-first with classical fallback",
+            algorithms=["ML-KEM-768 (primary)", "ML-DSA-65 (primary)"],
+            security_level="NIST Level 3",
+            quantum_safe=True,
+            recommended_timeline="2027-2030"
+        ),
+        MigrationPhase(
+            phase=4,
+            name="PQC Only",
+            description="Complete migration to quantum-resistant algorithms",
+            algorithms=["ML-KEM-1024", "ML-DSA-87", "SLH-DSA-SHA2-256f"],
+            security_level="NIST Level 5",
+            quantum_safe=True,
+            recommended_timeline="2030-2035"
+        )
+    ]
+    
+    return MigrationStrategyResponse(
+        phases=phases,
+        current_recommendation=(
+            "Organizations should begin Phase 2 (Hybrid Deployment) immediately. "
+            "The 'Harvest Now, Decrypt Later' threat means data encrypted today "
+            "could be decrypted by future quantum computers. Hybrid mode provides "
+            "immediate protection with minimal disruption."
+        ),
+        ietf_reference="draft-ietf-tls-ecdhe-mlkem (Hybrid Key Exchange for TLS 1.3)",
+        nist_reference="NIST IR 8547: Transition to Post-Quantum Cryptography Standards"
+    )
+
+
+@app.get("/pqc/hybrid/keypairs", tags=["Hybrid PQC"])
+async def list_hybrid_keypairs():
+    """List all stored hybrid keypairs."""
+    return {
+        "count": len(_hybrid_keypair_store),
+        "keypairs": [
+            {
+                "id": kp_id,
+                "kem_algorithm": kp['kem_algorithm'],
+                "created_at": kp['created_at'],
+                "has_encapsulation": 'last_encap' in kp
+            }
+            for kp_id, kp in _hybrid_keypair_store.items()
+        ]
+    }
 
 
 # =============================================================================

@@ -119,4 +119,4 @@ yfinance>=0.2.36
 # Reference: https://vitaldb.net/
 # DOI: 10.1038/s41597-022-01411-5
 # Optional: pip install vitaldb
-vitaldb>=1.0.0
+# vitaldb>=1.0.0

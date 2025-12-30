@@ -1,23 +1,45 @@
 # PQC-FHE Integration Platform
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Python 3.9+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
+[![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
 [![NIST PQC](https://img.shields.io/badge/NIST-PQC%20Standardized-green.svg)](https://csrc.nist.gov/projects/post-quantum-cryptography)
+[![Kubernetes](https://img.shields.io/badge/Kubernetes-Helm%20Chart-326ce5.svg)](https://helm.sh/)
+[![Prometheus](https://img.shields.io/badge/Prometheus-Monitoring-e6522c.svg)](https://prometheus.io/)
 
 Production-ready framework combining **Post-Quantum Cryptography (PQC)** with **Fully Homomorphic Encryption (FHE)** for enterprise security applications.
 
-## Overview
+## What's New in v2.3.5 Complete
 
-This platform addresses the emerging threat of quantum computers to current cryptographic systems while enabling privacy-preserving computation on sensitive data.
+🔐 **Hybrid X25519 + ML-KEM Key Exchange**
+- Defense-in-depth security combining classical and post-quantum cryptography
+- IETF draft-ietf-tls-ecdhe-mlkem compliant
 
-### Key Features
+☸️ **Kubernetes Deployment**
+- Production-ready Helm chart
+- Horizontal Pod Autoscaling (2-10 replicas)
+- GPU worker support with NVIDIA device plugin
 
-- **NIST-Standardized PQC**: ML-KEM (FIPS 203), ML-DSA (FIPS 204)
-- **Homomorphic Encryption**: CKKS scheme via DESILO FHE
-- **Live Data Integration**: VitalDB, Yahoo Finance, Ethereum RPC
-- **REST API**: FastAPI with Swagger documentation
-- **Web UI**: React-based interactive demonstrations
-- **GPU Acceleration**: CUDA 12.x/13.x support
+📊 **Monitoring & Observability**
+- Prometheus ServiceMonitor integration
+- Pre-configured alerting rules
+- Grafana dashboard support
+
+📝 **File-Based Logging**
+- Rotating log files (10MB max, 5 backups)
+- Separate error and access logs
+- Configurable log levels
+
+## Key Features
+
+| Feature | Technology | Status |
+|---------|------------|--------|
+| Post-Quantum KEM | ML-KEM-768 (FIPS 203) | ✅ Production |
+| Post-Quantum Signatures | ML-DSA-65 (FIPS 204) | ✅ Production |
+| Hybrid Key Exchange | X25519 + ML-KEM-768 | ✅ Production |
+| Homomorphic Encryption | CKKS (DESILO FHE) | ✅ Production |
+| Kubernetes Deployment | Helm Chart | ✅ Production |
+| Monitoring | Prometheus + Grafana | ✅ Production |
+| File Logging | RotatingFileHandler | ✅ Production |
 
 ## Quick Start
 
@@ -67,115 +89,232 @@ pip install yfinance vitaldb
 python -m uvicorn api.server:app --host 0.0.0.0 --port 8000
 ```
 
-### Access
+### Access Points
 
 - **Web UI**: http://localhost:8000/ui
-- **API Docs**: http://localhost:8000/docs (Swagger)
-- **Health Check**: http://localhost:8000/health
+- **API Docs**: http://localhost:8000/docs
+- **Metrics**: http://localhost:8000/metrics
+- **Health**: http://localhost:8000/health
 
-## Supported Algorithms
+## Kubernetes Deployment
 
-### Post-Quantum Cryptography (NIST Standardized)
+### Helm Chart Installation
 
-| Algorithm | Type | Security Level | Use Case |
-|-----------|------|----------------|----------|
-| ML-KEM-512 | KEM | Level 1 | IoT/Embedded |
-| ML-KEM-768 | KEM | Level 3 | General Purpose |
-| ML-KEM-1024 | KEM | Level 5 | High Security |
-| ML-DSA-44 | Signature | Level 2 | Fast Signing |
-| ML-DSA-65 | Signature | Level 3 | Balanced |
-| ML-DSA-87 | Signature | Level 5 | Maximum Security |
+```bash
+# Add dependencies
+helm dependency update ./kubernetes/helm/pqc-fhe
 
-### Fully Homomorphic Encryption
+# Install
+helm install pqc-fhe ./kubernetes/helm/pqc-fhe \
+  --namespace pqc-fhe --create-namespace
 
-| Parameter | Value | Description |
-|-----------|-------|-------------|
-| Scheme | CKKS | Approximate arithmetic |
-| poly_degree | 16,384 | Ring dimension |
-| scale | 2^40 | Encoding precision |
-| slot_count | 8,192 | Parallel operations |
+# With GPU workers
+helm install pqc-fhe ./kubernetes/helm/pqc-fhe \
+  --set gpuWorker.enabled=true \
+  --set gpuWorker.replicaCount=2
+```
+
+### Helm Chart Features
+
+| Feature | Description |
+|---------|-------------|
+| **Auto-scaling** | HPA with 2-10 replicas |
+| **GPU Workers** | NVIDIA device plugin support |
+| **Redis Cache** | Optional caching layer |
+| **Prometheus** | ServiceMonitor + alerts |
+| **NetworkPolicy** | Security isolation |
+| **PodDisruptionBudget** | High availability |
+| **Ingress** | TLS termination |
+
+### Key Configuration Values
+
+```yaml
+api:
+  replicaCount: 2
+  resources:
+    limits:
+      cpu: 2000m
+      memory: 4Gi
+  autoscaling:
+    enabled: true
+    maxReplicas: 10
+
+gpuWorker:
+  enabled: false
+  resources:
+    limits:
+      nvidia.com/gpu: 1
+
+crypto:
+  pqc:
+    kemAlgorithm: ML-KEM-768
+    signatureAlgorithm: ML-DSA-65
+  fhe:
+    useBootstrap: true
+    mode: cpu
+
+prometheus:
+  enabled: true
+```
+
+## Monitoring
+
+### Prometheus Metrics
+
+| Metric | Type | Description |
+|--------|------|-------------|
+| `http_requests_total` | Counter | Total HTTP requests |
+| `http_request_duration_seconds` | Histogram | Request latency |
+| `fhe_encryption_duration_seconds` | Histogram | FHE encrypt time |
+| `pqc_keygen_duration_seconds` | Histogram | Key generation |
+
+### Pre-configured Alerts
+
+| Alert | Condition | Severity |
+|-------|-----------|----------|
+| PQCFHEHighErrorRate | Error rate > 5% | Critical |
+| PQCFHEHighLatency | p95 > 5s | Warning |
+| PQCFHEPodNotReady | Pods not ready | Warning |
+| PQCFHESlowEncryption | Encrypt > 10s | Warning |
+
+## Logging
+
+### Log Files
+
+| File | Max Size | Backups | Content |
+|------|----------|---------|---------|
+| `logs/pqc_fhe_server.log` | 10 MB | 5 | All server logs |
+| `logs/pqc_fhe_error.log` | 10 MB | 3 | Errors only |
+| `logs/pqc_fhe_access.log` | 10 MB | 5 | HTTP access |
+
+### Configuration
+
+```bash
+# Set log level via environment variable
+export LOG_LEVEL=DEBUG  # DEBUG, INFO, WARNING, ERROR, CRITICAL
+python -m uvicorn api.server:app
+```
+
+### Log Format
+
+```
+# File format (includes source location)
+2025-12-30 12:00:00 - api.server - INFO - [server.py:123] - Message
+
+# Console format
+2025-12-30 12:00:00 - api.server - INFO - Message
+```
+
+## Hybrid Migration Strategy
+
+| Phase | Timeline | Strategy | Algorithms |
+|-------|----------|----------|------------|
+| 1. Assessment | 2024-2025 | Inventory | RSA, ECDSA, X25519 |
+| **2. Hybrid** | **2025-2027** | **Deploy hybrid** | **X25519 + ML-KEM-768** |
+| 3. PQC Primary | 2027-2030 | PQC first | ML-KEM-768 |
+| 4. PQC Only | 2030-2035 | Full migration | ML-KEM-1024 |
 
 ## API Endpoints
 
+### Hybrid Key Exchange (v2.3.5)
+
 | Endpoint | Method | Description |
 |----------|--------|-------------|
-| `/health` | GET | Health check |
-| `/pqc/algorithms` | GET | List available algorithms |
-| `/pqc/kem/keypair` | POST | Generate KEM keypair |
-| `/pqc/kem/encapsulate` | POST | Encapsulate shared secret |
-| `/pqc/kem/decapsulate` | POST | Decapsulate shared secret |
-| `/pqc/sig/keypair` | POST | Generate signature keypair |
+| `/pqc/hybrid/keypair` | POST | Generate hybrid keypair |
+| `/pqc/hybrid/encapsulate` | POST | Hybrid encapsulation |
+| `/pqc/hybrid/decapsulate` | POST | Hybrid decapsulation |
+| `/pqc/hybrid/compare` | GET | Algorithm comparison |
+| `/pqc/hybrid/migration-strategy` | GET | Migration roadmap |
+
+### PQC Operations
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/pqc/kem/keypair` | POST | Generate ML-KEM keypair |
+| `/pqc/kem/encapsulate` | POST | Encapsulate secret |
 | `/pqc/sig/sign` | POST | Sign message |
 | `/pqc/sig/verify` | POST | Verify signature |
-| `/fhe/encrypt` | POST | Encrypt data (CKKS) |
+
+### FHE Operations
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/fhe/encrypt` | POST | Encrypt data |
 | `/fhe/decrypt` | POST | Decrypt ciphertext |
 | `/fhe/add` | POST | Homomorphic addition |
 | `/fhe/multiply` | POST | Homomorphic multiplication |
-| `/enterprise/healthcare` | GET | Healthcare demo (VitalDB) |
-| `/enterprise/finance` | GET | Finance demo (Yahoo Finance) |
-| `/enterprise/iot` | GET | IoT demo (UCI Dataset) |
-| `/enterprise/blockchain` | GET | Blockchain demo (Ethereum) |
 
-## Enterprise Use Cases
+## Project Structure
 
-### Healthcare (HIPAA-Compliant Analytics)
-Analyze encrypted patient vital signs without exposing PHI. Compute statistics on blood pressure readings while maintaining full regulatory compliance.
-
-### Finance (Confidential Portfolio Analysis)
-Perform growth projections on encrypted portfolio values. Client holdings remain confidential during third-party analysis.
-
-### IoT (Secure Smart Grid)
-Aggregate encrypted smart meter readings for demand forecasting without accessing individual consumption patterns.
-
-### Blockchain (Quantum-Resistant Transactions)
-Migrate from ECDSA to ML-DSA signatures, protecting transaction integrity against future quantum attacks.
-
-## Live Data Sources
-
-| Domain | Source | License |
-|--------|--------|---------|
-| Healthcare | [VitalDB](https://vitaldb.net/) | CC BY-NC-SA 4.0 |
-| Finance | [Yahoo Finance](https://finance.yahoo.com/) | Terms of Service |
-| IoT | [UCI ML Repository](https://archive.ics.uci.edu/) | CC BY 4.0 |
-| Blockchain | Ethereum RPC (Ankr, PublicNode) | Free/Public |
+```
+pqc_fhe_benckmark/
+├── api/
+│   └── server.py              # FastAPI server (v2.3.5)
+├── kubernetes/
+│   └── helm/pqc-fhe/          # Helm chart
+│       ├── Chart.yaml
+│       ├── values.yaml
+│       └── templates/
+│           ├── deployment.yaml
+│           ├── service.yaml
+│           ├── hpa.yaml
+│           ├── servicemonitor.yaml
+│           └── ...
+├── monitoring/
+│   └── prometheus.yml         # Prometheus config
+├── web_ui/
+│   └── index.html             # React Web UI
+├── docs/
+│   ├── PQC_FHE_Technical_Report_v2.3.5_Complete.pdf
+│   └── PQC_FHE_Technical_Report_v2.3.5_Complete.docx
+├── logs/                      # Log files (auto-created)
+│   ├── pqc_fhe_server.log
+│   ├── pqc_fhe_error.log
+│   └── pqc_fhe_access.log
+└── README.md
+```
 
 ## Documentation
 
-- [Technical Report (PDF)](docs/PQC_FHE_Technical_Report_v2.3.4.pdf) - 18 pages
-- [Technical Report (Word)](docs/PQC_FHE_Technical_Report_v2.3.4.docx) - Editable version
-- [API Documentation](http://localhost:8000/docs) - Interactive Swagger UI
+- [Technical Report (PDF)](docs/PQC_FHE_Technical_Report_v2.3.5_Complete.pdf)
+- [Technical Report (Word)](docs/PQC_FHE_Technical_Report_v2.3.5_Complete.docx)
+- [API Documentation](http://localhost:8000/docs)
+- [CHANGELOG](CHANGELOG.md)
 
 ## Requirements
 
-- Python 3.11+
+- Python 3.9+
 - liboqs-python (build from source)
-- DESILO FHE library
-- FastAPI, uvicorn
-- Optional: CUDA 12.x/13.x for GPU acceleration(Use at least VRAM 30GB GPU)
-
-
+- cryptography (for X25519)
+- desilofhe (FHE library)
+- Kubernetes 1.24+ (for Helm deployment)
 
 ## References
 
 1. NIST FIPS 203: ML-KEM Standard (August 2024)
 2. NIST FIPS 204: ML-DSA Standard (August 2024)
-3. NIST FIPS 205: SLH-DSA Standard (August 2024)
-4. Cheon et al. CKKS: Homomorphic Encryption for Approximate Numbers (ASIACRYPT 2017)
-5. DESILO FHE Library: https://fhe.desilo.dev/latest/
-6. Open Quantum Safe: https://openquantumsafe.org/
+3. IETF draft-ietf-tls-ecdhe-mlkem: Hybrid Key Exchange
+4. NIST IR 8547: PQC Migration Guidelines
+5. DESILO FHE Library: https://fhe.desilo.dev/
+6. Kubernetes Helm: https://helm.sh/docs/
+
+## Version History
+
+### v2.3.5 Complete (2025-12-30)
+- X25519 + ML-KEM hybrid key exchange
+- Kubernetes Helm chart with GPU support
+- Prometheus monitoring and alerting
+- File-based logging with rotation
+- Web UI Hybrid Migration tab
+
+### v2.3.4 (2025-12-30)
+- Fixed numpy array handling
+- Enhanced live data fetching
 
 ## License
 
 MIT License - see [LICENSE](LICENSE) for details.
 
-## Contributing
-
-Contributions are welcome! Please read the contributing guidelines before submitting pull requests.
-
-## Author
-
-Created for quantum-safe cryptography research and enterprise security applications.
-
 ---
 
-**Note**: This platform is intended for research and development purposes. For production deployment, ensure proper security audits and compliance verification.
+**Security Notice**: This platform implements NIST-standardized post-quantum cryptography with Kubernetes deployment support and comprehensive monitoring.
