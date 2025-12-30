@@ -276,8 +276,8 @@ pqc_fhe_benckmark/
 
 ## Documentation
 
-- [Technical Report (PDF)](docs/PQC_FHE_Technical_Report_v2.3.5_Complete.pdf)
-- [Technical Report (Word)](docs/PQC_FHE_Technical_Report_v2.3.5_Complete.docx)
+- [Technical Report (PDF)](docs/PQC_FHE_Technical_Report_v2.3.5_Enterprise.pdf)
+- [Technical Report (Word)](docs/PQC_FHE_Technical_Report_v2.3.5_Enterprise.docx)
 - [API Documentation](http://localhost:8000/docs)
 - [CHANGELOG](CHANGELOG.md)
 
