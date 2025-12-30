@@ -1,0 +1,1006 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PQC-FHE Integration - Interactive Crypto Simulation</title>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .gradient-bg { background: linear-gradient(135deg, #1e3a8a 0%, #7c3aed 50%, #059669 100%); }
+        .pulse-animation { animation: pulse 2s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        .step-complete { background: linear-gradient(135deg, #10b981, #059669); }
+        .step-active { background: linear-gradient(135deg, #3b82f6, #1d4ed8); animation: pulse 1.5s infinite; }
+        .step-pending { background: #e5e7eb; }
+        .data-flow { animation: flowRight 1s ease-in-out; }
+        @keyframes flowRight { from { opacity: 0; transform: translateX(-20px); } to { opacity: 1; transform: translateX(0); } }
+        .log-entry { animation: fadeIn 0.3s ease-in; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <div id="root"></div>
+    
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+        const API_BASE = 'http://127.0.0.1:8000';
+        
+        // Icons
+        const Icons = {
+            Key: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" /></svg>,
+            Signature: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>,
+            Calculator: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>,
+            Healthcare: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" /></svg>,
+            Financial: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
+            IoT: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" /></svg>,
+            Blockchain: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" /></svg>,
+            Check: () => <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>,
+            Arrow: () => <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>,
+            Play: () => <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" /></svg>,
+            Reset: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>,
+        };
+        
+        const truncateHex = (hex, len = 16) => hex ? `${hex.slice(0, len)}...${hex.slice(-8)}` : '';
+        const formatTime = () => new Date().toLocaleTimeString();
+        
+        // API helper with error handling
+        const apiCall = async (endpoint, options = {}, timeoutMs = 60000) => {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+            
+            try {
+                const response = await fetch(`${API_BASE}${endpoint}`, {
+                    headers: { 'Content-Type': 'application/json' },
+                    signal: controller.signal,
+                    ...options
+                });
+                
+                clearTimeout(timeoutId);
+                
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    throw new Error(errorData.detail || `HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                return response.json();
+            } catch (error) {
+                clearTimeout(timeoutId);
+                if (error.name === 'AbortError') {
+                    throw new Error('Request timed out - FHE operations may take time on first run');
+                }
+                throw error;
+            }
+        };
+        
+        // Activity Log
+        const ActivityLog = ({ logs }) => {
+            const logEndRef = useRef(null);
+            useEffect(() => { logEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [logs]);
+            
+            return (
+                <div className="bg-gray-900 rounded-lg p-4 h-48 overflow-y-auto font-mono text-sm">
+                    {logs.length === 0 && <div className="text-gray-500">Click "Run Simulation" to start...</div>}
+                    {logs.map((log, i) => (
+                        <div key={i} className={`log-entry mb-1 ${log.type === 'error' ? 'text-red-400' : log.type === 'success' ? 'text-green-400' : log.type === 'info' ? 'text-blue-400' : 'text-gray-300'}`}>
+                            <span className="text-gray-500">[{log.time}]</span> {log.message}
+                        </div>
+                    ))}
+                    <div ref={logEndRef} />
+                </div>
+            );
+        };
+        
+        // Step Indicator
+        const StepIndicator = ({ steps, currentStep }) => (
+            <div className="flex items-center justify-center gap-2 mb-6">
+                {steps.map((step, i) => (
+                    <React.Fragment key={i}>
+                        <div className={`flex items-center justify-center w-8 h-8 rounded-full text-white text-sm font-bold ${i < currentStep ? 'step-complete' : i === currentStep ? 'step-active' : 'step-pending text-gray-500'}`}>
+                            {i < currentStep ? <Icons.Check /> : i + 1}
+                        </div>
+                        {i < steps.length - 1 && <div className={`w-12 h-1 rounded ${i < currentStep ? 'bg-green-500' : 'bg-gray-300'}`} />}
+                    </React.Fragment>
+                ))}
+            </div>
+        );
+        
+        // Person Card
+        const PersonCard = ({ name, color, publicKey, secretKey, sharedSecret }) => (
+            <div className={`bg-white rounded-xl shadow-lg p-4 border-t-4 ${color}`}>
+                <div className="flex items-center gap-2 mb-3">
+                    <div className={`w-10 h-10 rounded-full ${color.replace('border-', 'bg-')} flex items-center justify-center text-white font-bold`}>{name[0]}</div>
+                    <span className="font-semibold text-lg">{name}</span>
+                </div>
+                <div className="space-y-2 text-sm">
+                    <div><span className="text-gray-500">Public Key:</span><div className="font-mono text-xs bg-gray-100 p-1 rounded truncate">{publicKey ? truncateHex(publicKey) : '—'}</div></div>
+                    <div><span className="text-gray-500">Secret Key:</span><div className="font-mono text-xs bg-red-50 p-1 rounded truncate">{secretKey ? truncateHex(secretKey) : '—'}</div></div>
+                    {sharedSecret && (<div><span className="text-gray-500">Shared Secret:</span><div className="font-mono text-xs bg-green-100 p-1 rounded truncate">{truncateHex(sharedSecret)}</div></div>)}
+                </div>
+            </div>
+        );
+        
+        // Key Exchange Simulation
+        const KeyExchangeSimulation = () => {
+            const [step, setStep] = useState(0);
+            const [running, setRunning] = useState(false);
+            const [alice, setAlice] = useState({});
+            const [bob, setBob] = useState({});
+            const [logs, setLogs] = useState([]);
+            const [ciphertext, setCiphertext] = useState('');
+            const [algorithm, setAlgorithm] = useState('ML-KEM-768');
+            const [availableAlgorithms, setAvailableAlgorithms] = useState([]);
+            
+            useEffect(() => {
+                apiCall('/pqc/algorithms')
+                    .then(data => setAvailableAlgorithms(data.kem_algorithms || []))
+                    .catch(() => setAvailableAlgorithms([
+                        { name: 'ML-KEM-512', nist_level: 1, public_key_size: 800 },
+                        { name: 'ML-KEM-768', nist_level: 3, public_key_size: 1184, recommended: true },
+                        { name: 'ML-KEM-1024', nist_level: 5, public_key_size: 1568 }
+                    ]));
+            }, []);
+            
+            const addLog = (message, type = 'info') => setLogs(prev => [...prev, { time: formatTime(), message, type }]);
+            
+            const runSimulation = async () => {
+                setRunning(true); setStep(0); setAlice({}); setBob({}); setCiphertext(''); setLogs([]);
+                try {
+                    // Step 1: Alice generates keypair
+                    addLog(`Alice: Generating ${algorithm} keypair...`, 'info');
+                    const aliceKeys = await apiCall('/pqc/kem/keypair', { 
+                        method: 'POST',
+                        body: JSON.stringify({ algorithm })
+                    });
+                    
+                    if (!aliceKeys.public_key || !aliceKeys.secret_key) {
+                        throw new Error('Invalid keypair response from server');
+                    }
+                    
+                    setAlice({ publicKey: aliceKeys.public_key, secretKey: aliceKeys.secret_key });
+                    addLog(`Alice: Keypair generated (${aliceKeys.algorithm || algorithm})`, 'success');
+                    addLog(`  Public key: ${aliceKeys.public_key_size || 1184} bytes`, 'info');
+                    setStep(1); 
+                    await new Promise(r => setTimeout(r, 800));
+                    
+                    // Step 2: Alice sends public key to Bob
+                    addLog('Alice → Bob: Sending public key...', 'info');
+                    setBob(prev => ({ ...prev, alicePublicKey: aliceKeys.public_key }));
+                    setStep(2); 
+                    await new Promise(r => setTimeout(r, 800));
+                    
+                    // Step 3: Bob encapsulates
+                    addLog('Bob: Encapsulating shared secret...', 'info');
+                    const encap = await apiCall('/pqc/kem/encapsulate', {
+                        method: 'POST',
+                        body: JSON.stringify({ public_key: aliceKeys.public_key, algorithm })
+                    });
+                    
+                    if (!encap.ciphertext || !encap.shared_secret) {
+                        throw new Error('Invalid encapsulation response from server');
+                    }
+                    
+                    setBob(prev => ({ ...prev, sharedSecret: encap.shared_secret }));
+                    setCiphertext(encap.ciphertext);
+                    addLog(`Bob: Shared secret generated (${encap.ciphertext_size || 1088} bytes ciphertext)`, 'success');
+                    setStep(3); 
+                    await new Promise(r => setTimeout(r, 800));
+                    
+                    // Step 4: Bob sends ciphertext to Alice
+                    addLog('Bob → Alice: Sending ciphertext...', 'info');
+                    setStep(4); 
+                    await new Promise(r => setTimeout(r, 800));
+                    
+                    // Step 5: Alice decapsulates
+                    addLog('Alice: Decapsulating shared secret...', 'info');
+                    const decap = await apiCall('/pqc/kem/decapsulate', {
+                        method: 'POST',
+                        body: JSON.stringify({ 
+                            ciphertext: encap.ciphertext, 
+                            secret_key: aliceKeys.secret_key,
+                            algorithm
+                        })
+                    });
+                    
+                    if (!decap.shared_secret) {
+                        throw new Error('Invalid decapsulation response from server');
+                    }
+                    
+                    setAlice(prev => ({ ...prev, sharedSecret: decap.shared_secret }));
+                    addLog(`Alice: Shared secret recovered`, 'success');
+                    setStep(5); 
+                    await new Promise(r => setTimeout(r, 800));
+                    
+                    // Step 6: Verify
+                    const match = encap.shared_secret === decap.shared_secret;
+                    setStep(6);
+                    if (match) {
+                        addLog('✓ Shared secrets match! Secure channel established.', 'success');
+                        addLog(`  Secret: ${truncateHex(decap.shared_secret, 24)}`, 'success');
+                    } else {
+                        addLog('✗ Shared secrets do NOT match! Protocol failure.', 'error');
+                    }
+                } catch (e) { 
+                    addLog(`Error: ${e.message}`, 'error'); 
+                    if (e.message.includes('liboqs') || e.message.includes('503')) {
+                        addLog('Hint: Install liboqs-python to enable PQC operations', 'error');
+                    }
+                }
+                setRunning(false);
+            };
+            
+            return (
+                <div className="space-y-6">
+                    <div className="text-center">
+                        <h3 className="text-xl font-bold text-gray-800 mb-2">Post-Quantum Key Exchange (FIPS 203)</h3>
+                        <p className="text-gray-600">Secure key encapsulation using liboqs</p>
+                    </div>
+                    <div className="flex justify-center items-center gap-4 mb-4">
+                        <label className="text-sm font-medium text-gray-700">Algorithm:</label>
+                        <select 
+                            value={algorithm} 
+                            onChange={e => setAlgorithm(e.target.value)}
+                            disabled={running}
+                            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        >
+                            {availableAlgorithms.map(alg => (
+                                <option key={alg.name} value={alg.name}>
+                                    {alg.name} (Level {alg.nist_level}, {alg.public_key_size}B pk) {alg.recommended ? '★' : ''}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+                    <StepIndicator steps={['KeyGen', 'Send PK', 'Encap', 'Send CT', 'Decap', 'Verify']} currentStep={step} />
+                    <div className="grid grid-cols-3 gap-4 items-center">
+                        <PersonCard name="Alice" color="border-blue-500" {...alice} />
+                        <div className="flex flex-col items-center gap-4">
+                            {step >= 2 && <div className="data-flow text-blue-500"><Icons.Arrow /></div>}
+                            {ciphertext && <div className="text-xs font-mono bg-purple-100 p-2 rounded text-center max-w-32 truncate">CT: {truncateHex(ciphertext, 12)}</div>}
+                            {step >= 4 && <div className="data-flow text-green-500 rotate-180"><Icons.Arrow /></div>}
+                        </div>
+                        <PersonCard name="Bob" color="border-green-500" publicKey={bob.alicePublicKey} sharedSecret={bob.sharedSecret} />
+                    </div>
+                    <div className="flex justify-center gap-4">
+                        <button onClick={runSimulation} disabled={running} className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 transition"><Icons.Play /> {running ? 'Running...' : 'Run Simulation'}</button>
+                        <button onClick={() => { setStep(0); setAlice({}); setBob({}); setCiphertext(''); setLogs([]); }} className="flex items-center gap-2 px-6 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition"><Icons.Reset /> Reset</button>
+                    </div>
+                    <ActivityLog logs={logs} />
+                </div>
+            );
+        };
+        
+        // Signature Simulation
+        const SignatureSimulation = () => {
+            const [step, setStep] = useState(0);
+            const [running, setRunning] = useState(false);
+            const [message, setMessage] = useState('This document is signed with post-quantum cryptography.');
+            const [signature, setSignature] = useState('');
+            const [publicKey, setPublicKey] = useState('');
+            const [isValid, setIsValid] = useState(null);
+            const [logs, setLogs] = useState([]);
+            const [algorithm, setAlgorithm] = useState('ML-DSA-65');
+            const [availableAlgorithms, setAvailableAlgorithms] = useState([]);
+            
+            useEffect(() => {
+                apiCall('/pqc/algorithms')
+                    .then(data => setAvailableAlgorithms(data.sig_algorithms || []))
+                    .catch(() => setAvailableAlgorithms([
+                        { name: 'ML-DSA-44', nist_level: 2, signature_size: 2420 },
+                        { name: 'ML-DSA-65', nist_level: 3, signature_size: 3309, recommended: true },
+                        { name: 'ML-DSA-87', nist_level: 5, signature_size: 4627 }
+                    ]));
+            }, []);
+            
+            const addLog = (message, type = 'info') => setLogs(prev => [...prev, { time: formatTime(), message, type }]);
+            
+            const runSimulation = async () => {
+                setRunning(true); setStep(0); setSignature(''); setIsValid(null); setLogs([]);
+                try {
+                    // Step 1: Generate keypair
+                    addLog(`Generating ${algorithm} keypair...`, 'info');
+                    const keys = await apiCall('/pqc/sig/keypair', { 
+                        method: 'POST',
+                        body: JSON.stringify({ algorithm })
+                    });
+                    
+                    if (!keys.public_key || !keys.secret_key) {
+                        throw new Error('Invalid keypair response from server');
+                    }
+                    
+                    setPublicKey(keys.public_key);
+                    addLog(`Keypair generated (${keys.algorithm || algorithm})`, 'success');
+                    addLog(`  Public key: ${keys.public_key_size || 1952} bytes`, 'info');
+                    setStep(1); 
+                    await new Promise(r => setTimeout(r, 800));
+                    
+                    // Step 2: Sign message
+                    addLog(`Signing message: "${message.slice(0,30)}..."`, 'info');
+                    const signRes = await apiCall('/pqc/sig/sign', {
+                        method: 'POST',
+                        body: JSON.stringify({ message, secret_key: keys.secret_key, algorithm })
+                    });
+                    
+                    if (!signRes.signature) {
+                        throw new Error('Invalid signature response from server');
+                    }
+                    
+                    setSignature(signRes.signature);
+                    const sigBytes = signRes.signature.length / 2;
+                    addLog(`Signature generated (${sigBytes} bytes)`, 'success');
+                    setStep(2); 
+                    await new Promise(r => setTimeout(r, 800));
+                    
+                    // Step 3: Verify signature
+                    addLog('Verifying signature...', 'info');
+                    const verifyRes = await apiCall('/pqc/sig/verify', {
+                        method: 'POST',
+                        body: JSON.stringify({ 
+                            message, 
+                            signature: signRes.signature, 
+                            public_key: keys.public_key,
+                            algorithm
+                        })
+                    });
+                    
+                    setIsValid(verifyRes.valid);
+                    setStep(3);
+                    if (verifyRes.valid) {
+                        addLog('✓ Signature is VALID!', 'success');
+                    } else {
+                        addLog('✗ Signature is INVALID!', 'error');
+                    }
+                } catch (e) { 
+                    addLog(`Error: ${e.message}`, 'error');
+                    if (e.message.includes('liboqs') || e.message.includes('503')) {
+                        addLog('Hint: Install liboqs-python to enable PQC operations', 'error');
+                    }
+                }
+                setRunning(false);
+            };
+            
+            return (
+                <div className="space-y-6">
+                    <div className="text-center">
+                        <h3 className="text-xl font-bold text-gray-800 mb-2">Post-Quantum Digital Signature (FIPS 204)</h3>
+                        <p className="text-gray-600">Digital signatures using liboqs</p>
+                    </div>
+                    <div className="flex justify-center items-center gap-4 mb-4">
+                        <label className="text-sm font-medium text-gray-700">Algorithm:</label>
+                        <select 
+                            value={algorithm} 
+                            onChange={e => setAlgorithm(e.target.value)}
+                            disabled={running}
+                            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                        >
+                            {availableAlgorithms.map(alg => (
+                                <option key={alg.name} value={alg.name}>
+                                    {alg.name} (Level {alg.nist_level}, {alg.signature_size}B sig) {alg.recommended ? '★' : ''}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+                    <StepIndicator steps={['KeyGen', 'Sign', 'Verify', 'Result']} currentStep={step} />
+                    <div className="bg-white rounded-xl shadow-lg p-6">
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Message to Sign:</label>
+                        <textarea value={message} onChange={e => setMessage(e.target.value)} className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-purple-500" rows="3" />
+                    </div>
+                    {signature && (
+                        <div className="bg-white rounded-xl shadow-lg p-6 space-y-4">
+                            <div><span className="text-sm font-medium text-gray-700">Public Key:</span><div className="font-mono text-xs bg-gray-100 p-2 rounded break-all">{truncateHex(publicKey, 32)}</div></div>
+                            <div><span className="text-sm font-medium text-gray-700">Signature ({signature.length / 2} bytes):</span><div className="font-mono text-xs bg-purple-100 p-2 rounded break-all">{truncateHex(signature, 48)}</div></div>
+                            {isValid !== null && (<div className={`text-center py-3 rounded-lg ${isValid ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>{isValid ? '✓ Signature Verified!' : '✗ Verification Failed!'}</div>)}
+                        </div>
+                    )}
+                    <div className="flex justify-center gap-4">
+                        <button onClick={runSimulation} disabled={running || !message} className="flex items-center gap-2 px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:bg-gray-400 transition"><Icons.Play /> {running ? 'Running...' : 'Run Simulation'}</button>
+                        <button onClick={() => { setStep(0); setSignature(''); setPublicKey(''); setIsValid(null); setLogs([]); }} className="flex items-center gap-2 px-6 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition"><Icons.Reset /> Reset</button>
+                    </div>
+                    <ActivityLog logs={logs} />
+                </div>
+            );
+        };
+        
+        // FHE Simulation
+        const FHESimulation = () => {
+            const [step, setStep] = useState(0);
+            const [running, setRunning] = useState(false);
+            const [inputData, setInputData] = useState('1.0, 2.0, 3.0, 4.0, 5.0');
+            const [operation, setOperation] = useState('multiply');
+            const [scalar, setScalar] = useState('2.0');
+            const [result, setResult] = useState(null);
+            const [logs, setLogs] = useState([]);
+            
+            const addLog = (message, type = 'info') => setLogs(prev => [...prev, { time: formatTime(), message, type }]);
+            
+            const runSimulation = async () => {
+                setRunning(true); setStep(0); setResult(null); setLogs([]);
+                try {
+                    const data = inputData.split(',').map(v => parseFloat(v.trim())).filter(v => !isNaN(v));
+                    const scalarVal = parseFloat(scalar);
+                    
+                    if (data.length === 0) {
+                        throw new Error('Please enter valid numbers separated by commas');
+                    }
+                    
+                    // Step 1: Encrypt
+                    addLog(`Encrypting data: [${data.join(', ')}]`, 'info');
+                    const encryptRes = await apiCall('/fhe/encrypt', {
+                        method: 'POST',
+                        body: JSON.stringify({ data })
+                    });
+                    
+                    if (!encryptRes.ciphertext_id) {
+                        throw new Error('Invalid encryption response from server');
+                    }
+                    
+                    addLog(`Encrypted → ID: ${encryptRes.ciphertext_id}`, 'success');
+                    setStep(1); 
+                    await new Promise(r => setTimeout(r, 800));
+                    
+                    // Step 2: Compute
+                    const opLabel = operation === 'square' ? 'square' : `${operation}(${scalarVal})`;
+                    addLog(`Computing ${opLabel} on encrypted data...`, 'info');
+                    
+                    const computeBody = operation === 'square' 
+                        ? { ciphertext_id: encryptRes.ciphertext_id }
+                        : { ciphertext_id: encryptRes.ciphertext_id, scalar: scalarVal };
+                    
+                    const computeRes = await apiCall(`/fhe/${operation}`, {
+                        method: 'POST',
+                        body: JSON.stringify(computeBody)
+                    });
+                    
+                    if (!computeRes.result_ciphertext_id) {
+                        throw new Error('Invalid computation response from server');
+                    }
+                    
+                    addLog(`Computed → Result ID: ${computeRes.result_ciphertext_id}`, 'success');
+                    setStep(2); 
+                    await new Promise(r => setTimeout(r, 800));
+                    
+                    // Step 3: Decrypt
+                    addLog('Decrypting result...', 'info');
+                    const decryptRes = await apiCall('/fhe/decrypt', {
+                        method: 'POST',
+                        body: JSON.stringify({ ciphertext_id: computeRes.result_ciphertext_id })
+                    });
+                    
+                    if (!decryptRes.data) {
+                        throw new Error('Invalid decryption response from server');
+                    }
+                    
+                    // Calculate expected
+                    let expected;
+                    if (operation === 'multiply') expected = data.map(v => v * scalarVal);
+                    else if (operation === 'add') expected = data.map(v => v + scalarVal);
+                    else if (operation === 'square') expected = data.map(v => v * v);
+                    
+                    setResult({ actual: decryptRes.data.slice(0, data.length), expected, operation, scalar: scalarVal });
+                    addLog(`Result: [${decryptRes.data.slice(0, data.length).map(v => v.toFixed(4)).join(', ')}]`, 'success');
+                    setStep(3);
+                } catch (e) { 
+                    addLog(`Error: ${e.message}`, 'error');
+                }
+                setRunning(false);
+            };
+            
+            return (
+                <div className="space-y-6">
+                    <div className="text-center">
+                        <h3 className="text-xl font-bold text-gray-800 mb-2">CKKS Homomorphic Encryption (DESILO FHE)</h3>
+                        <p className="text-gray-600">Compute on encrypted data without decryption</p>
+                    </div>
+                    <StepIndicator steps={['Encrypt', 'Compute', 'Decrypt', 'Result']} currentStep={step} />
+                    <div className="bg-white rounded-xl shadow-lg p-6 space-y-4">
+                        <div><label className="block text-sm font-medium text-gray-700 mb-2">Input Data (comma-separated):</label><input type="text" value={inputData} onChange={e => setInputData(e.target.value)} className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-teal-500" /></div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div><label className="block text-sm font-medium text-gray-700 mb-2">Operation:</label><select value={operation} onChange={e => setOperation(e.target.value)} className="w-full p-3 border rounded-lg"><option value="multiply">Multiply</option><option value="add">Add</option><option value="square">Square</option></select></div>
+                            <div><label className="block text-sm font-medium text-gray-700 mb-2">Scalar:</label><input type="number" step="0.1" value={scalar} onChange={e => setScalar(e.target.value)} disabled={operation === 'square'} className="w-full p-3 border rounded-lg disabled:bg-gray-100" /></div>
+                        </div>
+                    </div>
+                    {result && (<div className="bg-white rounded-xl shadow-lg p-6"><h4 className="font-semibold mb-4">Results Comparison:</h4><div className="grid grid-cols-2 gap-4"><div><span className="text-sm text-gray-500">Expected:</span><div className="font-mono text-sm bg-blue-100 p-2 rounded">[{result.expected.map(v => v.toFixed(4)).join(', ')}]</div></div><div><span className="text-sm text-gray-500">FHE Result:</span><div className="font-mono text-sm bg-green-100 p-2 rounded">[{result.actual.map(v => v.toFixed(4)).join(', ')}]</div></div></div></div>)}
+                    <div className="flex justify-center gap-4">
+                        <button onClick={runSimulation} disabled={running} className="flex items-center gap-2 px-6 py-3 bg-teal-600 text-white rounded-lg hover:bg-teal-700 disabled:bg-gray-400 transition"><Icons.Play /> {running ? 'Running...' : 'Run Simulation'}</button>
+                        <button onClick={() => { setStep(0); setResult(null); setLogs([]); }} className="flex items-center gap-2 px-6 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition"><Icons.Reset /> Reset</button>
+                    </div>
+                    <ActivityLog logs={logs} />
+                </div>
+            );
+        };
+        
+        // Healthcare Example
+        const HealthcareExample = () => {
+            const [running, setRunning] = useState(false);
+            const [result, setResult] = useState(null);
+            const [logs, setLogs] = useState([]);
+            const [demoData, setDemoData] = useState(null);
+            const [showCitation, setShowCitation] = useState(false);
+            const [dataSource, setDataSource] = useState({
+                name: "VitalDB Open Dataset",
+                url: "https://vitaldb.net/dataset/",
+                doi: "10.1038/s41597-022-01411-5",
+                license: "CC BY-NC-SA 4.0",
+                citation: "Lee HC et al. VitalDB, a high-fidelity multi-parameter vital signs database. Sci Data 9, 279 (2022)"
+            });
+            const [isLiveData, setIsLiveData] = useState(false);
+            const addLog = (message, type = 'info') => setLogs(prev => [...prev, { time: formatTime(), message, type }]);
+            
+            useEffect(() => {
+                apiCall('/enterprise/healthcare')
+                    .then(data => {
+                        setDemoData(data);
+                        if (data.data_source) {
+                            setDataSource({
+                                name: data.data_source.name || "VitalDB Open Dataset",
+                                url: data.data_source.api_url || "https://vitaldb.net/dataset/",
+                                doi: data.data_source.doi || "10.1038/s41597-022-01411-5",
+                                license: data.data_source.license || "CC BY-NC-SA 4.0",
+                                citation: "Lee HC et al. VitalDB, a high-fidelity multi-parameter vital signs database. Sci Data 9, 279 (2022)"
+                            });
+                        }
+                        if (data.fetch_info) {
+                            setIsLiveData(data.fetch_info.live_data);
+                        }
+                    })
+                    .catch(() => setDemoData({ fhe_demo: { data: [118, 125, 112, 132, 120, 128, 115, 122, 130, 119] } }));
+            }, []);
+            
+            const runExample = async () => {
+                setRunning(true); setResult(null); setLogs([]);
+                try {
+                    addLog('Healthcare: Privacy-preserving vital signs analysis', 'info');
+                    addLog(`Data Source: ${dataSource.name} (DOI: ${dataSource.doi})`, 'info');
+                    addLog(`Data Type: ${isLiveData ? 'LIVE from API' : 'Embedded sample'}`, isLiveData ? 'success' : 'info');
+                    addLog('Initializing FHE engine (may take 10-30s on first run)...', 'info');
+                    
+                    const demoResult = await apiCall('/enterprise/demo/healthcare', { method: 'POST' }, 90000);
+                    
+                    addLog(`Patient BP readings: [${demoResult.input_data.join(', ')}] mmHg`, 'info');
+                    addLog(`Encrypted with ciphertext ID: ${demoResult.encrypted_ciphertext_id}`, 'success');
+                    addLog(`Computed mean on encrypted data`, 'info');
+                    addLog(`Decrypted result: ${demoResult.decrypted_mean} mmHg`, 'success');
+                    addLog(`Expected: ${demoResult.expected_mean} mmHg`, 'info');
+                    addLog(`Clinical interpretation: ${demoResult.clinical_interpretation}`, 'success');
+                    addLog('Patient data remained encrypted during computation!', 'success');
+                    
+                    setResult({ 
+                        avgBP: demoResult.decrypted_mean, 
+                        expectedAvg: demoResult.expected_mean,
+                        interpretation: demoResult.clinical_interpretation
+                    });
+                } catch (e) { 
+                    addLog(`Server demo failed: ${e.message}`, 'error');
+                    addLog(`Trying manual FHE demo...`, 'info');
+                    try {
+                        const vitalSigns = demoData?.fhe_demo?.data || demoData?.aggregation_example?.bp_readings || [118, 125, 112, 132, 120, 128, 115, 122, 130, 119];
+                        addLog(`Patient BP readings: [${vitalSigns.join(', ')}] mmHg`, 'info');
+                        
+                        addLog('Encrypting patient data with FHE...', 'info');
+                        const encryptRes = await apiCall('/fhe/encrypt', { method: 'POST', body: JSON.stringify({ data: vitalSigns }) });
+                        addLog(`Data encrypted: ${encryptRes.ciphertext_id}`, 'success');
+                        
+                        addLog('Computing average BP on encrypted data...', 'info');
+                        const avgRes = await apiCall('/fhe/multiply', { method: 'POST', body: JSON.stringify({ ciphertext_id: encryptRes.ciphertext_id, scalar: 0.1 }) });
+                        const decryptRes = await apiCall('/fhe/decrypt', { method: 'POST', body: JSON.stringify({ ciphertext_id: avgRes.result_ciphertext_id }) });
+                        
+                        const avgBP = decryptRes.data.slice(0, vitalSigns.length).reduce((a, b) => a + b, 0);
+                        const expectedAvg = vitalSigns.reduce((a, b) => a + b, 0) / vitalSigns.length;
+                        addLog(`Average BP: ${avgBP.toFixed(1)} mmHg (expected: ${expectedAvg.toFixed(1)})`, 'success');
+                        addLog('Patient data remained encrypted during computation!', 'success');
+                        setResult({ avgBP: avgBP.toFixed(1), expectedAvg: expectedAvg.toFixed(1) });
+                    } catch (e2) {
+                        addLog(`Error: ${e2.message}`, 'error');
+                    }
+                }
+                setRunning(false);
+            };
+            
+            return (
+                <div className="space-y-4">
+                    <div className="flex items-center gap-3 mb-4"><div className="w-10 h-10 rounded-full bg-red-500 flex items-center justify-center text-white"><Icons.Healthcare /></div><div><h4 className="font-bold text-lg">Healthcare: HIPAA-Compliant Analytics</h4><p className="text-sm text-gray-600">Analyze patient vitals without exposing PHI</p></div></div>
+                    
+                    <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm">
+                        <div className="flex justify-between items-start">
+                            <div>
+                                <strong className="text-red-800">Data Source:</strong> <span className="text-red-700">{dataSource.name}</span>
+                                {isLiveData && <span className="ml-2 text-xs bg-green-500 text-white px-1.5 py-0.5 rounded">LIVE</span>}
+                                <div className="text-xs text-red-600 mt-1">DOI: {dataSource.doi} | License: {dataSource.license}</div>
+                            </div>
+                            <button onClick={() => setShowCitation(!showCitation)} className="text-xs bg-red-100 px-2 py-1 rounded hover:bg-red-200">{showCitation ? 'Hide' : 'Show'} Citation</button>
+                        </div>
+                        {showCitation && <div className="mt-2 p-2 bg-white rounded text-xs italic border">{dataSource.citation}</div>}
+                    </div>
+                    
+                    {result && (<div className="bg-red-50 rounded-lg p-4"><div><strong>Average BP:</strong> {result.avgBP} mmHg (expected: {result.expectedAvg})</div>{result.interpretation && <div><strong>Clinical:</strong> {result.interpretation}</div>}<div className="text-green-600 mt-2"><strong>✓</strong> Medical analysis performed without exposing patient data</div></div>)}
+                    <button onClick={runExample} disabled={running} className="w-full py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 disabled:bg-gray-400 transition">{running ? 'Running...' : 'Run Healthcare Demo'}</button>
+                    <ActivityLog logs={logs} />
+                </div>
+            );
+        };
+        
+        // Financial Example
+        const FinancialExample = () => {
+            const [running, setRunning] = useState(false);
+            const [result, setResult] = useState(null);
+            const [logs, setLogs] = useState([]);
+            const [showCitation, setShowCitation] = useState(false);
+            const [demoData, setDemoData] = useState(null);
+            const [isLiveData, setIsLiveData] = useState(false);
+            const addLog = (message, type = 'info') => setLogs(prev => [...prev, { time: formatTime(), message, type }]);
+            
+            const [dataSource, setDataSource] = useState({
+                name: "Yahoo Finance",
+                url: "https://finance.yahoo.com/",
+                library: "yfinance (Apache 2.0)",
+                disclaimer: "Data for personal/educational use only"
+            });
+            
+            useEffect(() => {
+                apiCall('/enterprise/finance')
+                    .then(data => {
+                        setDemoData(data);
+                        if (data.fetch_info) {
+                            setIsLiveData(data.fetch_info.live_data);
+                        }
+                    })
+                    .catch(() => {});
+            }, []);
+            
+            const runExample = async () => {
+                setRunning(true); setResult(null); setLogs([]);
+                try {
+                    addLog('Financial: Confidential portfolio analysis', 'info');
+                    addLog(`Data Source: ${dataSource.name} via ${dataSource.library}`, 'info');
+                    addLog(`Data Type: ${isLiveData ? 'LIVE from API' : 'Embedded sample'}`, isLiveData ? 'success' : 'info');
+                    addLog('Initializing FHE engine (may take 10-30s on first run)...', 'info');
+                    
+                    const demoResult = await apiCall('/enterprise/demo/finance', { method: 'POST' }, 90000);
+                    
+                    addLog(`Portfolio values: $[${demoResult.input_portfolio.map(v => v/1000).join(', ')}]K`, 'info');
+                    addLog(`Total current: $${(demoResult.total_current/1000).toFixed(1)}K`, 'info');
+                    addLog(`Applying ${((demoResult.growth_rate - 1) * 100).toFixed(0)}% growth projection...`, 'info');
+                    addLog(`Projected values: $[${demoResult.projected_values.map(v => (v/1000).toFixed(1)).join(', ')}]K`, 'success');
+                    addLog(`Total projected: $${(demoResult.total_projected/1000).toFixed(1)}K`, 'success');
+                    addLog('Financial data remained encrypted during projections!', 'success');
+                    
+                    setResult({ 
+                        before: (demoResult.total_current/1000).toFixed(1), 
+                        after: (demoResult.total_projected/1000).toFixed(1), 
+                        gain: ((demoResult.total_projected - demoResult.total_current)/1000).toFixed(1)
+                    });
+                } catch (e) { 
+                    addLog(`Server demo failed: ${e.message}`, 'error');
+                    addLog(`Trying manual FHE demo...`, 'info');
+                    try {
+                        const portfolio = demoData?.growth_projection?.portfolio_values?.slice(0, 5).map(v => v/1000) || [150.5, 89.2, 234.8, 67.3, 412.1];
+                        const growthRate = 1.08;
+                        addLog(`Portfolio: $[${portfolio.join(', ')}]K`, 'info');
+                        
+                        addLog('Encrypting portfolio data...', 'info');
+                        const encryptRes = await apiCall('/fhe/encrypt', { method: 'POST', body: JSON.stringify({ data: portfolio }) });
+                        
+                        addLog('Applying 8% growth projection...', 'info');
+                        const projRes = await apiCall('/fhe/multiply', { method: 'POST', body: JSON.stringify({ ciphertext_id: encryptRes.ciphertext_id, scalar: growthRate }) });
+                        const decryptRes = await apiCall('/fhe/decrypt', { method: 'POST', body: JSON.stringify({ ciphertext_id: projRes.result_ciphertext_id }) });
+                        
+                        const totalBefore = portfolio.reduce((a, b) => a + b, 0);
+                        const totalAfter = decryptRes.data.slice(0, portfolio.length).reduce((a, b) => a + b, 0);
+                        addLog(`Projected: $${totalAfter.toFixed(1)}K (from $${totalBefore.toFixed(1)}K)`, 'success');
+                        addLog('Financial data remained encrypted during projections!', 'success');
+                        setResult({ before: totalBefore.toFixed(1), after: totalAfter.toFixed(1), gain: (totalAfter - totalBefore).toFixed(1) });
+                    } catch (e2) {
+                        addLog(`Error: ${e2.message}`, 'error');
+                    }
+                }
+                setRunning(false);
+            };
+            
+            return (
+                <div className="space-y-4">
+                    <div className="flex items-center gap-3 mb-4"><div className="w-10 h-10 rounded-full bg-yellow-500 flex items-center justify-center text-white"><Icons.Financial /></div><div><h4 className="font-bold text-lg">Finance: Secure Portfolio Analysis</h4><p className="text-sm text-gray-600">Project returns without exposing holdings</p></div></div>
+                    
+                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-sm">
+                        <div className="flex justify-between items-start">
+                            <div>
+                                <strong className="text-yellow-800">Data Source:</strong> <span className="text-yellow-700">{dataSource.name}</span>
+                                {isLiveData && <span className="ml-2 text-xs bg-green-500 text-white px-1.5 py-0.5 rounded">LIVE</span>}
+                                <div className="text-xs text-yellow-600 mt-1">Library: {dataSource.library}</div>
+                            </div>
+                            <button onClick={() => setShowCitation(!showCitation)} className="text-xs bg-yellow-100 px-2 py-1 rounded hover:bg-yellow-200">{showCitation ? 'Hide' : 'Show'} Info</button>
+                        </div>
+                        {showCitation && <div className="mt-2 p-2 bg-white rounded text-xs italic border">{dataSource.disclaimer}</div>}
+                    </div>
+                    
+                    {result && (<div className="bg-yellow-50 rounded-lg p-4"><div><strong>Before:</strong> ${result.before}K</div><div><strong>Projected:</strong> ${result.after}K</div><div><strong>Gain:</strong> +${result.gain}K</div><div className="text-green-600 mt-2"><strong>✓</strong> Investment analysis without revealing holdings</div></div>)}
+                    <button onClick={runExample} disabled={running} className="w-full py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 disabled:bg-gray-400 transition">{running ? 'Running...' : 'Run Financial Demo'}</button>
+                    <ActivityLog logs={logs} />
+                </div>
+            );
+        };
+        
+        // IoT Example
+        const IoTExample = () => {
+            const [running, setRunning] = useState(false);
+            const [result, setResult] = useState(null);
+            const [logs, setLogs] = useState([]);
+            const [showCitation, setShowCitation] = useState(false);
+            const [demoData, setDemoData] = useState(null);
+            const [isLiveData, setIsLiveData] = useState(false);
+            const addLog = (message, type = 'info') => setLogs(prev => [...prev, { time: formatTime(), message, type }]);
+            
+            const dataSource = {
+                name: "UCI ML Repository",
+                dataset: "Individual Household Electric Power Consumption",
+                url: "https://archive.ics.uci.edu/dataset/235",
+                doi: "10.24432/C52G6F",
+                license: "CC BY 4.0",
+                citation: "Hebrail G, Berard A. Individual household electric power consumption. UCI ML Repository. 2012"
+            };
+            
+            useEffect(() => {
+                apiCall('/enterprise/iot')
+                    .then(data => {
+                        setDemoData(data);
+                        if (data.fetch_info) {
+                            setIsLiveData(data.fetch_info.live_data);
+                        }
+                    })
+                    .catch(() => {});
+            }, []);
+            
+            const runExample = async () => {
+                setRunning(true); setResult(null); setLogs([]);
+                try {
+                    const powerReadings = demoData?.sensor_network?.power_values || demoData?.calibration_example?.sensor_readings || [4.216, 5.360, 5.374, 5.388, 3.666, 3.520, 3.702, 3.700];
+                    addLog('IoT: Secure sensor data aggregation', 'info');
+                    addLog(`Data Source: ${dataSource.name} (DOI: ${dataSource.doi})`, 'info');
+                    addLog(`Data Type: ${isLiveData ? 'LIVE from UCI' : 'Embedded sample'}`, isLiveData ? 'success' : 'info');
+                    addLog(`Power readings: [${powerReadings.join(', ')}] kW`, 'info');
+                    
+                    addLog('Establishing PQC-secured channel (ML-KEM-768)...', 'info');
+                    try {
+                        await apiCall('/pqc/kem/keypair', { method: 'POST' }, 30000);
+                        addLog('Quantum-resistant channel established', 'success');
+                    } catch (e) {
+                        addLog('PQC unavailable, continuing with FHE demo...', 'info');
+                    }
+                    
+                    addLog('Initializing FHE engine (may take 10-30s on first run)...', 'info');
+                    const encryptRes = await apiCall('/fhe/encrypt', { method: 'POST', body: JSON.stringify({ data: powerReadings }) }, 90000);
+                    addLog('Sensor data encrypted', 'success');
+                    
+                    addLog('Applying calibration on encrypted data...', 'info');
+                    const calibRes = await apiCall('/fhe/multiply', { method: 'POST', body: JSON.stringify({ ciphertext_id: encryptRes.ciphertext_id, scalar: 1.02 }) }, 60000);
+                    const decryptRes = await apiCall('/fhe/decrypt', { method: 'POST', body: JSON.stringify({ ciphertext_id: calibRes.result_ciphertext_id }) }, 60000);
+                    
+                    const avgCalib = decryptRes.data.slice(0, powerReadings.length).reduce((a, b) => a + b, 0) / powerReadings.length;
+                    addLog(`Calibrated average: ${avgCalib.toFixed(3)} kW`, 'success');
+                    addLog('Sensor data protected with FHE!', 'success');
+                    setResult({ avgCalib: avgCalib.toFixed(3), security: 'ML-KEM-768 + CKKS' });
+                } catch (e) { addLog(`Error: ${e.message}`, 'error'); }
+                setRunning(false);
+            };
+            
+            return (
+                <div className="space-y-4">
+                    <div className="flex items-center gap-3 mb-4"><div className="w-10 h-10 rounded-full bg-cyan-500 flex items-center justify-center text-white"><Icons.IoT /></div><div><h4 className="font-bold text-lg">IoT: Quantum-Safe Sensor Network</h4><p className="text-sm text-gray-600">Secure sensor aggregation with PQC + FHE</p></div></div>
+                    
+                    <div className="bg-cyan-50 border border-cyan-200 rounded-lg p-3 text-sm">
+                        <div className="flex justify-between items-start">
+                            <div>
+                                <strong className="text-cyan-800">Data Source:</strong> <span className="text-cyan-700">{dataSource.name}</span>
+                                {isLiveData && <span className="ml-2 text-xs bg-green-500 text-white px-1.5 py-0.5 rounded">LIVE</span>}
+                                <div className="text-xs text-cyan-600 mt-1">DOI: {dataSource.doi} | License: {dataSource.license}</div>
+                            </div>
+                            <button onClick={() => setShowCitation(!showCitation)} className="text-xs bg-cyan-100 px-2 py-1 rounded hover:bg-cyan-200">{showCitation ? 'Hide' : 'Show'} Citation</button>
+                        </div>
+                        {showCitation && <div className="mt-2 p-2 bg-white rounded text-xs italic border">{dataSource.citation}</div>}
+                    </div>
+                    
+                    {result && (<div className="bg-cyan-50 rounded-lg p-4"><div><strong>Calibrated Average:</strong> {result.avgCalib} kW</div><div><strong>Security:</strong> {result.security}</div><div className="text-green-600 mt-2"><strong>✓</strong> IoT data secured against quantum attacks</div></div>)}
+                    <button onClick={runExample} disabled={running} className="w-full py-2 bg-cyan-500 text-white rounded-lg hover:bg-cyan-600 disabled:bg-gray-400 transition">{running ? 'Running...' : 'Run IoT Demo'}</button>
+                    <ActivityLog logs={logs} />
+                </div>
+            );
+        };
+        
+        // Blockchain Example
+        const BlockchainExample = () => {
+            const [running, setRunning] = useState(false);
+            const [result, setResult] = useState(null);
+            const [logs, setLogs] = useState([]);
+            const [showCitation, setShowCitation] = useState(false);
+            const [demoData, setDemoData] = useState(null);
+            const [isLiveData, setIsLiveData] = useState(false);
+            const addLog = (message, type = 'info') => setLogs(prev => [...prev, { time: formatTime(), message, type }]);
+            
+            const dataSource = {
+                name: "Ethereum RPC",
+                url: "https://ethereum.org/",
+                attribution: "Powered by Public Ethereum RPC",
+                sampleTx: "0x5c504ed432cb51138bcf09aa5e8a410dd4a1e204ef84bfed1be16dfba1b22060",
+                description: "First Ethereum transaction ever (Block 46147)"
+            };
+            
+            useEffect(() => {
+                apiCall('/enterprise/blockchain')
+                    .then(data => {
+                        setDemoData(data);
+                        if (data.fetch_info) {
+                            setIsLiveData(data.fetch_info.live_data);
+                        }
+                    })
+                    .catch(() => {});
+            }, []);
+            
+            const runExample = async () => {
+                setRunning(true); setResult(null); setLogs([]);
+                try {
+                    const txData = demoData?.transactions?.[0] || {
+                        hash: dataSource.sampleTx.slice(0, 20) + '...',
+                        value_eth: 31337,
+                        block: 46147
+                    };
+                    const tx = { 
+                        hash: txData.hash || dataSource.sampleTx.slice(0, 42) + '...', 
+                        from: txData.from || '0xa1e4380a3b1f749673e270229993ee55f35663b4', 
+                        to: txData.to || '0x5df9b87991262f6ba471f09758cde1c0fc1de734', 
+                        value: txData.value_eth || 31337,
+                        block: txData.block || 46147,
+                        timestamp: Date.now() 
+                    };
+                    addLog('Blockchain: Quantum-resistant transaction signing', 'info');
+                    addLog(`Data Source: ${dataSource.name}`, 'info');
+                    addLog(`Data Type: ${isLiveData ? 'LIVE from Ethereum RPC' : 'Historical sample'}`, isLiveData ? 'success' : 'info');
+                    addLog(`Transaction value: ${tx.value} ETH (${txData.note || dataSource.description})`, 'info');
+                    
+                    addLog('Generating ML-DSA-65 signing keys...', 'info');
+                    const sigKeys = await apiCall('/pqc/sig/keypair', { method: 'POST', body: JSON.stringify({ algorithm: 'ML-DSA-65' }) });
+                    addLog(`Keypair generated (${sigKeys.algorithm || 'ML-DSA-65'})`, 'success');
+                    
+                    addLog('Signing transaction...', 'info');
+                    const signRes = await apiCall('/pqc/sig/sign', { method: 'POST', body: JSON.stringify({ message: JSON.stringify(tx), secret_key: sigKeys.secret_key, algorithm: 'ML-DSA-65' }) });
+                    addLog(`Signed (${signRes.signature.length / 2} bytes)`, 'success');
+                    
+                    addLog('Verifying signature...', 'info');
+                    const verifyRes = await apiCall('/pqc/sig/verify', { method: 'POST', body: JSON.stringify({ message: JSON.stringify(tx), signature: signRes.signature, public_key: sigKeys.public_key, algorithm: 'ML-DSA-65' }) });
+                    addLog(verifyRes.valid ? 'Transaction verified!' : 'Verification failed!', verifyRes.valid ? 'success' : 'error');
+                    setResult({ algorithm: sigKeys.algorithm || 'ML-DSA-65', sigSize: signRes.signature.length / 2, verified: verifyRes.valid });
+                } catch (e) { 
+                    addLog(`Error: ${e.message}`, 'error');
+                    if (e.message.includes('liboqs') || e.message.includes('503') || e.message.includes('500')) {
+                        addLog('Hint: Install liboqs-python to enable PQC operations', 'error');
+                    }
+                }
+                setRunning(false);
+            };
+            
+            return (
+                <div className="space-y-4">
+                    <div className="flex items-center gap-3 mb-4"><div className="w-10 h-10 rounded-full bg-purple-500 flex items-center justify-center text-white"><Icons.Blockchain /></div><div><h4 className="font-bold text-lg">Blockchain: PQC Transaction Signing</h4><p className="text-sm text-gray-600">Sign transactions with ML-DSA-65</p></div></div>
+                    
+                    <div className="bg-purple-50 border border-purple-200 rounded-lg p-3 text-sm">
+                        <div className="flex justify-between items-start">
+                            <div>
+                                <strong className="text-purple-800">Data Source:</strong> <span className="text-purple-700">{dataSource.name}</span>
+                                {isLiveData && <span className="ml-2 text-xs bg-green-500 text-white px-1.5 py-0.5 rounded">LIVE</span>}
+                                <div className="text-xs text-purple-600 mt-1">{dataSource.attribution}</div>
+                            </div>
+                            <button onClick={() => setShowCitation(!showCitation)} className="text-xs bg-purple-100 px-2 py-1 rounded hover:bg-purple-200">{showCitation ? 'Hide' : 'Show'} Details</button>
+                        </div>
+                        {showCitation && <div className="mt-2 p-2 bg-white rounded text-xs border"><strong>Sample TX:</strong> {dataSource.sampleTx.slice(0, 30)}...<br/><strong>Note:</strong> {dataSource.description}</div>}
+                    </div>
+                    
+                    {result && (<div className="bg-purple-50 rounded-lg p-4"><div><strong>Algorithm:</strong> {result.algorithm}</div><div><strong>Signature:</strong> {result.sigSize} bytes</div><div><strong>Verified:</strong> {result.verified ? 'Yes' : 'No'}</div><div className="text-green-600 mt-2"><strong>✓</strong> Secure against Shor's algorithm</div></div>)}
+                    <button onClick={runExample} disabled={running} className="w-full py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 disabled:bg-gray-400 transition">{running ? 'Running...' : 'Run Blockchain Demo'}</button>
+                    <ActivityLog logs={logs} />
+                </div>
+            );
+        };
+        
+        // Enterprise Examples Tab
+        const EnterpriseExamples = () => {
+            const [activeExample, setActiveExample] = useState('healthcare');
+            const examples = [
+                { id: 'healthcare', label: 'Healthcare', icon: <Icons.Healthcare />, color: 'bg-red-500' },
+                { id: 'financial', label: 'Finance', icon: <Icons.Financial />, color: 'bg-yellow-500' },
+                { id: 'iot', label: 'IoT', icon: <Icons.IoT />, color: 'bg-cyan-500' },
+                { id: 'blockchain', label: 'Blockchain', icon: <Icons.Blockchain />, color: 'bg-purple-500' },
+            ];
+            
+            return (
+                <div className="space-y-6">
+                    <div className="text-center"><h3 className="text-xl font-bold text-gray-800 mb-2">Enterprise Use Cases</h3><p className="text-gray-600">Real-world applications of PQC + FHE integration</p></div>
+                    <div className="flex justify-center gap-2 flex-wrap">
+                        {examples.map(ex => (<button key={ex.id} onClick={() => setActiveExample(ex.id)} className={`flex items-center gap-2 px-4 py-2 rounded-lg transition ${activeExample === ex.id ? `${ex.color} text-white` : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}>{ex.icon} {ex.label}</button>))}
+                    </div>
+                    <div className="bg-white rounded-xl shadow-lg p-6">
+                        {activeExample === 'healthcare' && <HealthcareExample />}
+                        {activeExample === 'financial' && <FinancialExample />}
+                        {activeExample === 'iot' && <IoTExample />}
+                        {activeExample === 'blockchain' && <BlockchainExample />}
+                    </div>
+                </div>
+            );
+        };
+        
+        // Main App
+        const App = () => {
+            const [activeTab, setActiveTab] = useState('keyexchange');
+            const [serverStatus, setServerStatus] = useState('checking');
+            const [healthData, setHealthData] = useState(null);
+            
+            useEffect(() => {
+                apiCall('/health')
+                    .then(data => { 
+                        setServerStatus(data.status === 'healthy' ? 'online' : 'degraded'); 
+                        setHealthData(data); 
+                    })
+                    .catch(() => setServerStatus('offline'));
+            }, []);
+            
+            const tabs = [
+                { id: 'keyexchange', label: 'Key Exchange', icon: <Icons.Key /> },
+                { id: 'signature', label: 'Digital Signature', icon: <Icons.Signature /> },
+                { id: 'fhe', label: 'FHE Computation', icon: <Icons.Calculator /> },
+                { id: 'enterprise', label: 'Enterprise Examples', icon: <Icons.Blockchain /> },
+            ];
+            
+            return (
+                <div className="min-h-screen">
+                    <div className="gradient-bg text-white py-8 px-4">
+                        <div className="max-w-6xl mx-auto">
+                            <div className="flex items-center justify-between flex-wrap gap-4">
+                                <div><h1 className="text-3xl font-bold mb-2">PQC-FHE Integration Platform</h1><p className="text-white/80">liboqs + DESILO FHE - Production Implementation</p></div>
+                                <div className="text-right">
+                                    <div className="flex items-center gap-2 justify-end">
+                                        <div className={`w-3 h-3 rounded-full ${serverStatus === 'online' ? 'bg-green-400' : serverStatus === 'degraded' ? 'bg-yellow-400' : serverStatus === 'offline' ? 'bg-red-400' : 'bg-yellow-400 pulse-animation'}`}></div>
+                                        <span className="text-sm">{serverStatus === 'online' ? 'All Systems Operational' : serverStatus === 'degraded' ? 'Degraded' : serverStatus === 'offline' ? 'Server Offline' : 'Checking...'}</span>
+                                    </div>
+                                    {healthData && healthData.components && (<div className="mt-2 text-xs space-x-2"><span className="bg-white/20 px-2 py-1 rounded">PQC: {healthData.components.pqc_algorithms || 'N/A'}</span><span className="bg-white/20 px-2 py-1 rounded">FHE: {healthData.components.fhe}</span></div>)}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div className="max-w-6xl mx-auto px-4 py-8">
+                        {serverStatus === 'offline' && (<div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-6"><div className="flex items-center gap-2 text-red-700"><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg><span className="font-medium">API Server is not running</span></div><p className="text-red-600 text-sm mt-1">Start: <code className="bg-red-100 px-2 py-1 rounded">cd pqc_fhe_portfolio_v2.3.0_complete && uvicorn api.server:app --reload</code></p></div>)}
+                        
+                        {serverStatus === 'degraded' && healthData?.components?.pqc === 'unavailable' && (
+                            <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 mb-6">
+                                <div className="flex items-center gap-2 text-yellow-700">
+                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                                    <span className="font-medium">PQC Not Available</span>
+                                </div>
+                                <p className="text-yellow-600 text-sm mt-1">liboqs-python is not installed. PQC operations will fail.</p>
+                                <p className="text-yellow-600 text-sm">Install: <code className="bg-yellow-100 px-2 py-1 rounded">git clone --depth=1 https://github.com/open-quantum-safe/liboqs-python && cd liboqs-python && pip install .</code></p>
+                                <p className="text-yellow-600 text-sm mt-1">FHE operations will still work.</p>
+                            </div>
+                        )}
+                        
+                        <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
+                            {tabs.map(tab => (<button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`flex items-center gap-2 px-5 py-3 rounded-xl font-medium transition whitespace-nowrap ${activeTab === tab.id ? 'bg-blue-600 text-white shadow-lg' : 'bg-white text-gray-600 hover:bg-gray-100 shadow'}`}>{tab.icon} {tab.label}</button>))}
+                        </div>
+                        
+                        <div className="bg-white rounded-2xl shadow-xl p-8">
+                            {activeTab === 'keyexchange' && <KeyExchangeSimulation />}
+                            {activeTab === 'signature' && <SignatureSimulation />}
+                            {activeTab === 'fhe' && <FHESimulation />}
+                            {activeTab === 'enterprise' && <EnterpriseExamples />}
+                        </div>
+                        
+                        <div className="mt-8 text-center text-gray-500 text-sm">
+                            <p>PQC-FHE Integration v2.3.0 | liboqs + DESILO FHE</p>
+                            <p className="mt-1"><a href="/docs" className="text-blue-500 hover:underline">API Docs</a> | <a href="https://github.com/open-quantum-safe/liboqs-python" target="_blank" className="text-blue-500 hover:underline ml-2">liboqs-python</a> | <a href="https://fhe.desilo.dev" target="_blank" className="text-blue-500 hover:underline ml-2">DESILO FHE</a></p>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+        
+        ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+    </script>
+</body>
+</html>

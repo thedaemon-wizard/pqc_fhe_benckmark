@@ -1,0 +1,70 @@
+{{/*
+PQC-FHE Kubernetes PodDisruptionBudget Template
+=================================================
+Ensures high availability during voluntary disruptions.
+
+Use Cases:
+- Node maintenance
+- Cluster upgrades
+- Rolling deployments
+
+Reference:
+- Kubernetes PDB documentation
+- High availability best practices for cryptographic services
+*/}}
+
+{{- if .Values.api.podDisruptionBudget.enabled }}
+apiVersion: {{ include "pqc-fhe.pdb.apiVersion" . }}
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "pqc-fhe.fullname" . }}-api
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "pqc-fhe.api.labels" . | nindent 4 }}
+spec:
+  {{- if .Values.api.podDisruptionBudget.minAvailable }}
+  # Minimum number of pods that must be available
+  minAvailable: {{ .Values.api.podDisruptionBudget.minAvailable }}
+  {{- else if .Values.api.podDisruptionBudget.maxUnavailable }}
+  # Maximum number of pods that can be unavailable
+  maxUnavailable: {{ .Values.api.podDisruptionBudget.maxUnavailable }}
+  {{- else }}
+  # Default: at least 1 pod must be available
+  minAvailable: 1
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "pqc-fhe.api.selectorLabels" . | nindent 6 }}
+  {{- if .Capabilities.APIVersions.Has "policy/v1" }}
+  # Unhealthy pod eviction policy (Kubernetes 1.26+)
+  {{- if .Values.api.podDisruptionBudget.unhealthyPodEvictionPolicy }}
+  unhealthyPodEvictionPolicy: {{ .Values.api.podDisruptionBudget.unhealthyPodEvictionPolicy }}
+  {{- end }}
+  {{- end }}
+{{- end }}
+
+{{- if and .Values.gpuWorker.enabled .Values.gpuWorker.podDisruptionBudget.enabled }}
+---
+# GPU Worker PDB
+# More conservative - GPU workers handle expensive computations
+apiVersion: {{ include "pqc-fhe.pdb.apiVersion" . }}
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "pqc-fhe.fullname" . }}-gpu-worker
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "pqc-fhe.gpuWorker.labels" . | nindent 4 }}
+spec:
+  {{- if .Values.gpuWorker.podDisruptionBudget.minAvailable }}
+  minAvailable: {{ .Values.gpuWorker.podDisruptionBudget.minAvailable }}
+  {{- else if .Values.gpuWorker.podDisruptionBudget.maxUnavailable }}
+  maxUnavailable: {{ .Values.gpuWorker.podDisruptionBudget.maxUnavailable }}
+  {{- else }}
+  # Default: no GPU workers can be disrupted simultaneously
+  # This ensures FHE operations complete before pod termination
+  maxUnavailable: 0
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "pqc-fhe.gpuWorker.selectorLabels" . | nindent 6 }}
+{{- end }}

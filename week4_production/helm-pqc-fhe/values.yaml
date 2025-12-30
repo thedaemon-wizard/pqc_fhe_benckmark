@@ -1,0 +1,313 @@
+# Default values for pqc-fhe.
+# This is a YAML-formatted file.
+
+# =============================================================================
+# GLOBAL CONFIGURATION
+# =============================================================================
+global:
+  # Image pull secrets for private registries
+  imagePullSecrets: []
+  # Storage class for persistent volumes
+  storageClass: ""
+
+# =============================================================================
+# API SERVICE CONFIGURATION
+# =============================================================================
+api:
+  # Replica count for API deployment
+  replicaCount: 2
+  
+  # Container image settings
+  image:
+    repository: pqc-fhe-api
+    pullPolicy: IfNotPresent
+    tag: ""  # Defaults to Chart appVersion
+  
+  # Service account
+  serviceAccount:
+    create: true
+    annotations: {}
+    name: ""
+  
+  # Pod security context
+  podSecurityContext:
+    fsGroup: 1000
+    runAsNonRoot: true
+  
+  # Container security context
+  securityContext:
+    capabilities:
+      drop:
+        - ALL
+    readOnlyRootFilesystem: true
+    runAsNonRoot: true
+    runAsUser: 1000
+  
+  # Service configuration
+  service:
+    type: ClusterIP
+    port: 8000
+    annotations: {}
+  
+  # Ingress configuration
+  ingress:
+    enabled: false
+    className: nginx
+    annotations:
+      nginx.ingress.kubernetes.io/ssl-redirect: "true"
+      nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
+      cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    hosts:
+      - host: pqc-fhe.example.com
+        paths:
+          - path: /
+            pathType: Prefix
+    tls:
+      - secretName: pqc-fhe-tls
+        hosts:
+          - pqc-fhe.example.com
+  
+  # Resource limits and requests
+  resources:
+    limits:
+      cpu: 2000m
+      memory: 4Gi
+    requests:
+      cpu: 500m
+      memory: 1Gi
+  
+  # Autoscaling configuration
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+  
+  # Node selector
+  nodeSelector: {}
+  
+  # Tolerations
+  tolerations: []
+  
+  # Affinity rules
+  affinity:
+    podAntiAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+        - weight: 100
+          podAffinityTerm:
+            labelSelector:
+              matchExpressions:
+                - key: app.kubernetes.io/name
+                  operator: In
+                  values:
+                    - pqc-fhe-api
+            topologyKey: kubernetes.io/hostname
+  
+  # Environment variables
+  env:
+    LOG_LEVEL: INFO
+    WORKERS: "4"
+    CORS_ORIGINS: "*"
+  
+  # Health check configuration
+  healthCheck:
+    livenessProbe:
+      httpGet:
+        path: /health
+        port: http
+      initialDelaySeconds: 30
+      periodSeconds: 10
+      timeoutSeconds: 5
+      failureThreshold: 3
+    readinessProbe:
+      httpGet:
+        path: /health
+        port: http
+      initialDelaySeconds: 10
+      periodSeconds: 5
+      timeoutSeconds: 3
+      failureThreshold: 3
+
+# =============================================================================
+# GPU WORKER CONFIGURATION
+# =============================================================================
+gpuWorker:
+  # Enable GPU worker deployment
+  enabled: false
+  
+  # Replica count
+  replicaCount: 1
+  
+  # Container image
+  image:
+    repository: pqc-fhe-api
+    pullPolicy: IfNotPresent
+    tag: "gpu"
+  
+  # Resource limits (including GPU)
+  resources:
+    limits:
+      cpu: 4000m
+      memory: 16Gi
+      nvidia.com/gpu: 1
+    requests:
+      cpu: 2000m
+      memory: 8Gi
+      nvidia.com/gpu: 1
+  
+  # Node selector for GPU nodes
+  nodeSelector:
+    accelerator: nvidia-gpu
+  
+  # Tolerations for GPU nodes
+  tolerations:
+    - key: nvidia.com/gpu
+      operator: Exists
+      effect: NoSchedule
+
+# =============================================================================
+# CRYPTOGRAPHY CONFIGURATION
+# =============================================================================
+crypto:
+  # PQC Configuration
+  pqc:
+    kemAlgorithm: ML-KEM-768
+    signatureAlgorithm: ML-DSA-65
+    securityLevel: 3  # 1=128-bit, 3=192-bit, 5=256-bit
+  
+  # FHE Configuration
+  fhe:
+    logN: 15
+    scaleBits: 40
+    numScales: 60
+    useBootstrap: true
+    mode: cpu  # cpu or gpu
+  
+  # Key management
+  keyManagement:
+    rotationDays: 90
+    backupEnabled: true
+
+# =============================================================================
+# REDIS CONFIGURATION
+# =============================================================================
+redis:
+  enabled: true
+  
+  # Architecture: standalone or replication
+  architecture: standalone
+  
+  # Authentication
+  auth:
+    enabled: true
+    password: ""  # Auto-generated if empty
+  
+  # Master configuration
+  master:
+    persistence:
+      enabled: true
+      size: 8Gi
+    resources:
+      limits:
+        cpu: 500m
+        memory: 512Mi
+      requests:
+        cpu: 100m
+        memory: 128Mi
+
+# =============================================================================
+# PROMETHEUS CONFIGURATION
+# =============================================================================
+prometheus:
+  enabled: true
+  
+  # Server configuration
+  server:
+    retention: 15d
+    persistentVolume:
+      enabled: true
+      size: 50Gi
+  
+  # Alertmanager
+  alertmanager:
+    enabled: true
+  
+  # Push gateway (for batch jobs)
+  pushgateway:
+    enabled: false
+
+# =============================================================================
+# GRAFANA CONFIGURATION
+# =============================================================================
+grafana:
+  enabled: true
+  
+  # Admin credentials
+  adminUser: admin
+  adminPassword: ""  # Auto-generated if empty
+  
+  # Persistence
+  persistence:
+    enabled: true
+    size: 10Gi
+  
+  # Datasources
+  datasources:
+    datasources.yaml:
+      apiVersion: 1
+      datasources:
+        - name: Prometheus
+          type: prometheus
+          url: http://{{ .Release.Name }}-prometheus-server
+          access: proxy
+          isDefault: true
+
+# =============================================================================
+# PERSISTENCE CONFIGURATION
+# =============================================================================
+persistence:
+  # Key storage
+  keys:
+    enabled: true
+    storageClass: ""
+    accessMode: ReadWriteOnce
+    size: 1Gi
+  
+  # Cache storage
+  cache:
+    enabled: true
+    storageClass: ""
+    accessMode: ReadWriteOnce
+    size: 10Gi
+
+# =============================================================================
+# NETWORK POLICIES
+# =============================================================================
+networkPolicy:
+  enabled: true
+  
+  # Allow ingress from specified namespaces
+  allowedNamespaces:
+    - default
+    - kube-system
+  
+  # Allow specific CIDR blocks
+  allowedCIDRs: []
+
+# =============================================================================
+# POD DISRUPTION BUDGET
+# =============================================================================
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
+  # maxUnavailable: 1
+
+# =============================================================================
+# SERVICE MONITOR (Prometheus Operator)
+# =============================================================================
+serviceMonitor:
+  enabled: false
+  interval: 30s
+  scrapeTimeout: 10s
+  additionalLabels: {}
