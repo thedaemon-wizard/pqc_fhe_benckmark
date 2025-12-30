@@ -1,7 +1,7 @@
 # PQC-FHE Integration Platform
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
+[![Python 3.9+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![NIST PQC](https://img.shields.io/badge/NIST-PQC%20Standardized-green.svg)](https://csrc.nist.gov/projects/post-quantum-cryptography)
 
 Production-ready framework combining **Post-Quantum Cryptography (PQC)** with **Fully Homomorphic Encryption (FHE)** for enterprise security applications.
