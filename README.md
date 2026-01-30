@@ -281,6 +281,14 @@ pqc_fhe_benckmark/
 - [API Documentation](http://localhost:8000/docs)
 - [CHANGELOG](CHANGELOG.md)
 
+## Video
+
+- [Section 1](https://drive.google.com/file/d/1yPIf4EWddI6nD4Xd5RF3UwH_bXOq-4qE/view?usp=drive_link)
+- [Section 2](https://drive.google.com/file/d/1WUafzAYjmubT_qIq2G4lYlFSjbfrkwnl/view?usp=drive_link)
+- [Section 3](https://drive.google.com/file/d/18CWyii9InBklhEBMzCWt5_RkETTETOYs/view?usp=drive_link)
+- [Section 4](https://drive.google.com/file/d/1zrcNjU4gknQpjtrv9c1FlFMpoxcazbro/view?usp=drive_link)
+- [Section 5](https://drive.google.com/file/d/1ZaJyMkqVUhZHdRJ0kBdEWDyZasM2m151/view?usp=drive_link)
+
 ## Requirements
 
 - Python 3.9+
