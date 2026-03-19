@@ -233,58 +233,80 @@ All notable changes to the PQC-FHE Integration Platform.
 
 **NIST Standards & Guidance:**
 - NIST FIPS 203 (ML-KEM), FIPS 204 (ML-DSA), FIPS 205 (SLH-DSA) — August 2024
-- NIST FIPS 204 Errata — February 2026 (minor corrections)
-- NIST FIPS 206 (FN-DSA/FALCON) — Initial Public Draft pending, ~666 byte signatures
-- NIST IR 8545 (Mar 2025): HQC selected as 4th-round code-based KEM
-- NIST IR 8547 — Transition to PQC Standards (still DRAFT as of March 2026)
-- NIST SP 800-227 — KEM operational guidance (Finalized September 18, 2025)
-- CNSA 2.0 (May 2025 update): 2030 full PQC migration deadline
+- NIST FIPS 203/204 Errata — February 2026 (minor corrections to both standards)
+- NIST FIPS 206 (FN-DSA/FALCON) — Initial Public Draft pending internal clearance, ~666 byte signatures. Final standard expected late 2026/early 2027.
+- NIST IR 8545 (Mar 2025): HQC selected as 4th-round code-based KEM. Draft standard expected early 2026, final 2027.
+- NIST IR 8547 — Transition to PQC Standards (still DRAFT as of March 2026). Deprecate 112-bit by 2031, all quantum-vulnerable by 2035.
+- NIST SP 800-227 — KEM operational guidance (Finalized September 18, 2025). Covers composite KEM, X-Wing KEM (ML-KEM + X25519), ephemeral key one-time use.
+- NIST CSWP 39 — Cryptographic Agility (Finalized December 19, 2025). Maturity model, CBOM practices, policy-mechanism separation.
+- NIST CSWP 48 — PQC Migration Mappings to CSF 2.0 and SP 800-53 (IPD September 18, 2025).
+- NIST Additional Signature Onramp Round 2 (Oct 2024): 14 candidates — CROSS, FAEST, HAWK, LESS, MAYO, Mirath, MQOM, PERK, QR-UOV, RYDE, SDitH, SNOVA, SQIsign, UOV.
+- CNSA 2.0 (May 2025 update): Dec 2025 CNSA 1.0 sunset, Jan 2027 mandatory, 2030 full PQC migration.
 
 **Shor Algorithm Resource Estimation:**
 - Gidney & Ekerå (2021): 20M physical qubits, Quantum 5, 433
-- Chevignard et al. (2024): 4M physical qubits, sublinear resources
-- Gidney (May 2025): Magic state cultivation → ~1M physical qubits
+- Chevignard et al. (2024): 4M physical qubits, ePrint 2024/222, CRYPTO 2025
+- Gidney (May 2025): Magic state cultivation → ~1M physical qubits, arXiv:2505.15917
 - Pinnacle Architecture (Feb 2026): QLDPC codes → ~100K physical qubits
+- Q-Day median estimate: 2029-2032 (ECC falls before RSA)
 
 **Lattice Cryptography & Quantum Sieving:**
-- Dutch team (Oct 2025): Quantum sieve exponent 0.3098 → 0.2846 (~8% improvement)
+- Dutch team (Oct 2025): Quantum sieve exponent 0.3098 → 0.2846 (~8% improvement, ~2^25 theoretical speedup at d=1000)
 - Zhao & Ding (PQCrypto 2025): BKZ improvements → 3-4 bit security reduction
-- Li & Nguyen (Journal of Cryptology 38, 2025): Complete BKZ analysis
+- Li & Nguyen (Journal of Cryptology 38, 2025): First rigorous dynamic BKZ analysis
 - BDGL sieve optimality (Jan 2026): NNS paradigm proven optimal
 - Ducas, Engelberts & Perthuis (ASIACRYPT 2025): Module-lattice reduction prediction
+- Ducas & Loyer (Oct 2025): Dense Sublattice approach ruled out (No-Go for cryptanalysis)
+- VERDE AI cryptanalysis (2025): Transformer-based red-team for lattice schemes, 30% faster training vs SALSA
 
 **Side-Channel Attacks:**
-- Berzati et al. (CHES 2025): ML-KEM SPA key recovery in 30 seconds
-- ML-DSA rejection sampling attack (TCHES 2025)
+- Berzati et al. (CASCADE 2025, LNCS 15952): ML-KEM SPA key recovery in 30s, 100% success rate
+- Nagpal et al. (SAC 2025): RNR countermeasure for ML-KEM NTT (62.8% overhead)
+- ML-DSA rejection sampling key recovery (TCHES 2025, Vol. 2025 No. 4, pp. 817-847)
+- ML-DSA factor-graph key recovery from rejected + valid signatures (ePrint 2025/582)
+- ML-DSA attack on y in masked impl (ePrint 2025/276)
+- ML-DSA CPA attack on hardware (HOST 2025, ePrint 2025/009)
+- ML-DSA implicit hint attack generalized from BLISS (SAC 2025, LNCS 16207)
 - ML-DSA template attack (DATE 2026, ePrint 2026/056)
+- ML-DSA/ML-KEM higher-order non-profiled SCA (IACR CiC 2025)
 - arXiv:2505.11058 (May 2025): CKKS NTT neural network SPA (98.6% key extraction)
-- CEA 2025: Threshold FHE CPAD attack, key recovery < 1 hour
-- PKC 2025: CKKS Noise-Flooding key recovery
+- CEA 2025: Threshold FHE CPAD attack, key recovery < 1 hour without smudging noise
+- PKC 2025: CKKS Noise-Flooding key recovery (non-worst-case noise estimation)
+- CPAD impossibility for HELLHO schemes (ePrint 2026/203): fundamental limitation for BFV/BGV/CKKS
+- Scheme switching attacks — PEGASUS (ePrint 2026/285): key recovery via CKKS-to-FHEW switching
 - EM fault injection on ML-KEM (2025): 89.5% success rate on ARM Cortex-M4
-- GlitchFHE (USENIX Security 2025): Fault injection on FHE
+- GlitchFHE (USENIX Security 2025): Single corrupted RNS limb breaks FHE confidentiality
 
 **Quantum Hardware:**
-- IBM Quantum (2026): Kookaburra 4,158 qubits, real-time qLDPC decoding (Feb 2026)
-- Google Quantum AI: Willow (105 qubits), Quantum Echoes (Dec 2025)
-- Microsoft Majorana 1: Topological qubit chip (Feb 2025)
-- Quantinuum Helios: 98 qubits, 94 logical qubits, 2:1 ratio (Mar 2026, $10B)
-- Magic state distillation optimal scaling gamma=0 (Nature Physics Nov 2025)
+- IBM Quantum (Mar 2026): Kookaburra 1,386-qubit processor, 4,158 qubits linked (3 chips). qLDPC codes reduce overhead up to 90%.
+- IBM Roadmap: Starling (2029, ~200 logical qubits, 100M gates), Blue Jay (2033, billion-gate, 2000+ logical qubits)
+- Google Quantum AI: Willow (105 qubits, below-threshold QEC), Quantum Echoes (Oct 2025, 13,000x classical)
+- Microsoft Majorana 1 (Feb 2025): 8 topological qubits, topoconductor material. Unvalidated — 2018 paper retracted.
+- Quantinuum Helios (Nov 2025): 98 physical qubits, 94 logical GHZ, 48 fully error-corrected (2:1 encoding), 50 error-detected. Sol (2027), Apollo (2029).
+- Magic state distillation: optimal scaling gamma=0 (Nature Physics Nov 2025), QuEra first experimental (Nature Jul 2025), low-cost 53-qubit (npj QI 2026)
+- Constant-overhead magic state injection into qLDPC codes (arXiv:2505.06981, May 2025)
 
 **FHE & PQC Integration:**
-- Gentry & Lee (2025): GL scheme, ePrint 2025/1935 (5th gen FHE)
-- FHE.org 2026 Taipei (Mar 7, 2026): GL scheme announcement
+- Gentry & Lee (2025): GL scheme, ePrint 2025/1935 (5th gen FHE for matrix arithmetic)
+- FHE.org 2026 Taipei (Mar 7, 2026): GL scheme announcement; sub-ms TFHE bootstrapping on GPU
 - DESILO FHE v1.10.0 (Feb 11, 2026): GLEngine API for matrix FHE
-- OpenFHE v1.5.0 (Feb 26, 2026): BFV/BGV/CKKS/TFHE with bootstrapping
-- FHE GPU acceleration: Cheddar (ASPLOS 2026), WarpDrive (HPCA 2025), CAT framework
+- OpenFHE v1.5.0 (Feb 26, 2026): BFV/BGV/CKKS/TFHE/LMKCDEY with bootstrapping
+- TFHE-rs v1.5.0 (Jan 2026): 42% faster ZK verification, MultiBit blind rotation
+- Theodosian (Dec 2025): 1.45-1.83x improvement over Cheddar via memory-hierarchy optimization
+- FHE GPU acceleration: Cheddar (ASPLOS 2026), WarpDrive (HPCA 2025, 73% instruction reduction), CAT (2173x speedup over CPU)
+- Arbitrary-Threshold FHE (USENIX Security 2025): O(N^2+K) complexity, 3.83-15.4x speedup for 1000-party
+- NIST MPTS 2026 Workshop (Jan 2026): Dedicated FHE session for threshold standardization (NIST IR 8214C category S5)
 - RhombusEnd2End_HEonGPU: GPU-accelerated 2PC inference
 - Google HEIR project: GL scheme investigation (GitHub Issue #2408)
 
 **Migration & Compliance:**
-- EU PQC Roadmap: Critical infrastructure by 2030, full transition by 2035
-- UK NCSC: PQC migration guidance, PQTLS recommendations
-- Japan CRYPTREC: PQC evaluation, 2035 target
-- Hybrid TLS: 38% of Cloudflare HTTPS connections use X25519+ML-KEM (Mar 2026)
+- EU PQC Roadmap (Jun 2025): National plans by end 2026, hybrid pilots 2026-2027, critical infra by 2030, full by 2035. EU Quantum Act expected Q2 2026.
+- UK NCSC (Mar 2025): 3-phase roadmap — Phase 1 (by 2028) discover, Phase 2 (2028-2031) upgrade, Phase 3 (2031-2035) complete.
+- Japan CRYPTREC: 2035 target, NEDO PQC program with PQShield/AIST/Mitsubishi/UTokyo.
+- Hybrid TLS: Only 8.6% of top 1M websites support PQC (F5 Labs, Jun 2025). Top 100: 42%. Banking: 3%.
 - Ubuntu 26.04 LTS (Apr 2026): PQC enabled by default in OpenSSH/OpenSSL
+- SNDL/HNDL active threat: DHS, UK NCSC, ENISA, Australian ACSC confirm adversaries harvesting encrypted data now.
+- Supply chain risk: PQC library supply chains identified as attack surface (Feb 2026 analysis)
 
 **Other:**
 - JVG Algorithm (Mar 2026): Debunked quantum factoring claims (Aaronson)
