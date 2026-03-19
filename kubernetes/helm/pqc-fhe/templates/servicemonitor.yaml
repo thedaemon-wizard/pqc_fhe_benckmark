@@ -1,0 +1,250 @@
+{{/*
+PQC-FHE Kubernetes ServiceMonitor Template
+============================================
+Configures Prometheus service discovery for metrics collection.
+
+Metrics Exposed:
+- HTTP request metrics (latency, count, errors)
+- Cryptographic operation metrics
+- FHE computation metrics (encryption time, depth, etc.)
+- Resource utilization metrics
+
+Reference:
+- Prometheus Operator documentation
+- PQC-FHE metrics specification
+*/}}
+
+{{- if and .Values.prometheus.enabled .Values.prometheus.serviceMonitor.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ include "pqc-fhe.fullname" . }}-api
+  namespace: {{ .Values.prometheus.serviceMonitor.namespace | default .Release.Namespace }}
+  labels:
+    {{- include "pqc-fhe.api.labels" . | nindent 4 }}
+    {{- with .Values.prometheus.serviceMonitor.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  selector:
+    matchLabels:
+      {{- include "pqc-fhe.api.selectorLabels" . | nindent 6 }}
+  
+  namespaceSelector:
+    matchNames:
+      - {{ .Release.Namespace }}
+  
+  endpoints:
+    - port: {{ .Values.api.metrics.enabled | ternary "metrics" "http" }}
+      path: {{ .Values.api.metrics.path | default "/metrics" }}
+      interval: {{ .Values.prometheus.serviceMonitor.interval | default "30s" }}
+      scrapeTimeout: {{ .Values.prometheus.serviceMonitor.scrapeTimeout | default "10s" }}
+      
+      {{- if .Values.prometheus.serviceMonitor.honorLabels }}
+      honorLabels: true
+      {{- end }}
+      
+      {{- if .Values.prometheus.serviceMonitor.honorTimestamps }}
+      honorTimestamps: true
+      {{- end }}
+      
+      # Metric relabeling
+      {{- if .Values.prometheus.serviceMonitor.metricRelabelings }}
+      metricRelabelings:
+        {{- toYaml .Values.prometheus.serviceMonitor.metricRelabelings | nindent 8 }}
+      {{- else }}
+      metricRelabelings:
+        # Add environment label
+        - sourceLabels: [__meta_kubernetes_namespace]
+          targetLabel: environment
+          action: replace
+        # Add service label
+        - sourceLabels: [__meta_kubernetes_service_name]
+          targetLabel: service
+          action: replace
+        # Drop high-cardinality metrics if needed
+        # - sourceLabels: [__name__]
+        #   regex: 'http_request_duration_seconds_bucket'
+        #   action: drop
+      {{- end }}
+      
+      # Relabeling before scraping
+      {{- if .Values.prometheus.serviceMonitor.relabelings }}
+      relabelings:
+        {{- toYaml .Values.prometheus.serviceMonitor.relabelings | nindent 8 }}
+      {{- end }}
+      
+      # TLS configuration (if metrics endpoint uses TLS)
+      {{- if .Values.prometheus.serviceMonitor.tlsConfig }}
+      tlsConfig:
+        {{- toYaml .Values.prometheus.serviceMonitor.tlsConfig | nindent 8 }}
+      {{- end }}
+      
+      # Bearer token authentication (if required)
+      {{- if .Values.prometheus.serviceMonitor.bearerTokenSecret }}
+      bearerTokenSecret:
+        name: {{ .Values.prometheus.serviceMonitor.bearerTokenSecret.name }}
+        key: {{ .Values.prometheus.serviceMonitor.bearerTokenSecret.key }}
+      {{- end }}
+  
+  # Target labels to transfer from service/pod
+  targetLabels:
+    - app.kubernetes.io/name
+    - app.kubernetes.io/instance
+    - app.kubernetes.io/version
+  
+  # Pod labels to transfer
+  podTargetLabels:
+    - app.kubernetes.io/component
+
+{{- if and .Values.gpuWorker.enabled .Values.gpuWorker.metrics.enabled }}
+---
+# GPU Worker ServiceMonitor
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ include "pqc-fhe.fullname" . }}-gpu-worker
+  namespace: {{ .Values.prometheus.serviceMonitor.namespace | default .Release.Namespace }}
+  labels:
+    {{- include "pqc-fhe.gpuWorker.labels" . | nindent 4 }}
+    {{- with .Values.prometheus.serviceMonitor.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  selector:
+    matchLabels:
+      {{- include "pqc-fhe.gpuWorker.selectorLabels" . | nindent 6 }}
+  
+  namespaceSelector:
+    matchNames:
+      - {{ .Release.Namespace }}
+  
+  endpoints:
+    - port: health
+      path: /metrics
+      interval: {{ .Values.prometheus.serviceMonitor.interval | default "30s" }}
+      scrapeTimeout: {{ .Values.prometheus.serviceMonitor.scrapeTimeout | default "10s" }}
+      
+      metricRelabelings:
+        - sourceLabels: [__meta_kubernetes_namespace]
+          targetLabel: environment
+          action: replace
+        - sourceLabels: [__meta_kubernetes_service_name]
+          targetLabel: service
+          action: replace
+  
+  targetLabels:
+    - app.kubernetes.io/name
+    - app.kubernetes.io/instance
+  
+  podTargetLabels:
+    - app.kubernetes.io/component
+{{- end }}
+{{- end }}
+
+{{- if and .Values.prometheus.enabled .Values.prometheus.prometheusRule.enabled }}
+---
+# PrometheusRule for alerting
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: {{ include "pqc-fhe.fullname" . }}
+  namespace: {{ .Values.prometheus.prometheusRule.namespace | default .Release.Namespace }}
+  labels:
+    {{- include "pqc-fhe.labels" . | nindent 4 }}
+    {{- with .Values.prometheus.prometheusRule.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  groups:
+    - name: pqc-fhe-api
+      rules:
+        # High error rate alert
+        - alert: PQCFHEHighErrorRate
+          expr: |
+            (
+              sum(rate(http_requests_total{service="{{ include "pqc-fhe.fullname" . }}-api",status=~"5.."}[5m]))
+              /
+              sum(rate(http_requests_total{service="{{ include "pqc-fhe.fullname" . }}-api"}[5m]))
+            ) > 0.05
+          for: 5m
+          labels:
+            severity: critical
+            service: pqc-fhe
+          annotations:
+            summary: "High error rate in PQC-FHE API"
+            description: "Error rate is {{ "{{ $value | humanizePercentage }}" }} (threshold: 5%)"
+        
+        # High latency alert
+        - alert: PQCFHEHighLatency
+          expr: |
+            histogram_quantile(0.95,
+              sum(rate(http_request_duration_seconds_bucket{service="{{ include "pqc-fhe.fullname" . }}-api"}[5m])) by (le)
+            ) > 5
+          for: 5m
+          labels:
+            severity: warning
+            service: pqc-fhe
+          annotations:
+            summary: "High latency in PQC-FHE API"
+            description: "95th percentile latency is {{ "{{ $value | humanizeDuration }}" }}"
+        
+        # Pod not ready alert
+        - alert: PQCFHEPodNotReady
+          expr: |
+            kube_deployment_status_replicas_ready{deployment="{{ include "pqc-fhe.fullname" . }}-api"}
+            < kube_deployment_spec_replicas{deployment="{{ include "pqc-fhe.fullname" . }}-api"}
+          for: 10m
+          labels:
+            severity: warning
+            service: pqc-fhe
+          annotations:
+            summary: "PQC-FHE API pods not ready"
+            description: "{{ "{{ $value }}" }} pods are not ready"
+        
+        # FHE operation slow alert
+        - alert: PQCFHESlowEncryption
+          expr: |
+            histogram_quantile(0.95,
+              sum(rate(fhe_encryption_duration_seconds_bucket{service="{{ include "pqc-fhe.fullname" . }}-api"}[5m])) by (le)
+            ) > 10
+          for: 5m
+          labels:
+            severity: warning
+            service: pqc-fhe
+          annotations:
+            summary: "FHE encryption operations are slow"
+            description: "95th percentile encryption time is {{ "{{ $value | humanizeDuration }}" }}"
+    
+    {{- if .Values.gpuWorker.enabled }}
+    - name: pqc-fhe-gpu
+      rules:
+        # GPU memory high usage
+        - alert: PQCFHEGPUMemoryHigh
+          expr: |
+            (DCGM_FI_DEV_FB_USED / DCGM_FI_DEV_FB_TOTAL) > 0.9
+          for: 5m
+          labels:
+            severity: warning
+            service: pqc-fhe
+          annotations:
+            summary: "GPU memory usage is high"
+            description: "GPU memory usage is {{ "{{ $value | humanizePercentage }}" }}"
+        
+        # GPU utilization low (waste of resources)
+        - alert: PQCFHEGPUUnderutilized
+          expr: |
+            avg_over_time(DCGM_FI_DEV_GPU_UTIL[1h]) < 10
+          for: 1h
+          labels:
+            severity: info
+            service: pqc-fhe
+          annotations:
+            summary: "GPU is underutilized"
+            description: "Average GPU utilization is {{ "{{ $value }}" }}%"
+    {{- end }}
+    
+    {{- with .Values.prometheus.prometheusRule.additionalRules }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+{{- end }}

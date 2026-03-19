@@ -1,0 +1,61 @@
+apiVersion: v2
+name: pqc-fhe
+description: Post-Quantum Cryptography + Fully Homomorphic Encryption Integration Platform
+
+# Chart type: application or library
+type: application
+
+# Chart version (independent of app version)
+version: 1.0.0
+
+# Application version
+appVersion: "1.0.0"
+
+# Keywords for search
+keywords:
+  - post-quantum-cryptography
+  - fully-homomorphic-encryption
+  - quantum-resistant
+  - fhe
+  - pqc
+  - ml-kem
+  - ml-dsa
+  - ckks
+  - privacy-preserving
+
+# Maintainer information
+maintainers:
+  - name: Amon
+    email: amon@example.com
+    url: https://github.com/amon
+
+# Project home page
+home: https://github.com/amon/pqc-fhe-portfolio
+
+# Source code URLs
+sources:
+  - https://github.com/amon/pqc-fhe-portfolio
+
+# Icon URL (optional)
+# icon: https://example.com/pqc-fhe-icon.png
+
+# Dependencies
+dependencies:
+  - name: redis
+    version: "18.x.x"
+    repository: https://charts.bitnami.com/bitnami
+    condition: redis.enabled
+  - name: prometheus
+    version: "25.x.x"
+    repository: https://prometheus-community.github.io/helm-charts
+    condition: prometheus.enabled
+
+# Annotations for ArtifactHub
+annotations:
+  category: Security
+  licenses: MIT
+  artifacthub.io/containsSecurityUpdates: "true"
+  artifacthub.io/prerelease: "false"
+  artifacthub.io/signKey: |
+    fingerprint: XXXXXXXXXXXXXXXX
+    url: https://example.com/pgp-key.asc
