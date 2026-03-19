@@ -42,7 +42,10 @@
             Play: () => <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" /></svg>,
             Reset: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>,
             Hybrid: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" /></svg>,
+<<<<<<< HEAD
             Shield: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>,
+=======
+>>>>>>> origin/main
         };
         
         const truncateHex = (hex, len = 16) => hex ? `${hex.slice(0, len)}...${hex.slice(-8)}` : '';
@@ -1156,6 +1159,7 @@
             );
         };
         
+<<<<<<< HEAD
         // Quantum Threat Assessment Tab (v3.0.0)
         const QuantumThreatTab = () => {
             const [algorithm, setAlgorithm] = useState('RSA-2048');
@@ -2056,6 +2060,8 @@
             );
         };
 
+=======
+>>>>>>> origin/main
         // Main App
         const App = () => {
             const [activeTab, setActiveTab] = useState('keyexchange');
@@ -2076,10 +2082,13 @@
                 { id: 'signature', label: 'Digital Signature', icon: <Icons.Signature /> },
                 { id: 'fhe', label: 'FHE Computation', icon: <Icons.Calculator /> },
                 { id: 'hybrid', label: 'Hybrid Migration', icon: <Icons.Hybrid /> },
+<<<<<<< HEAD
                 { id: 'quantum', label: 'Quantum Threat', icon: <Icons.Shield /> },
                 { id: 'scoring', label: 'Security Scoring', icon: <Icons.Shield /> },
                 { id: 'mpc', label: 'MPC-HE Demo', icon: <Icons.Calculator /> },
                 { id: 'sectors', label: 'Sector Benchmarks', icon: <Icons.Blockchain /> },
+=======
+>>>>>>> origin/main
                 { id: 'enterprise', label: 'Enterprise Examples', icon: <Icons.Blockchain /> },
             ];
             
@@ -2124,15 +2133,22 @@
                             {activeTab === 'signature' && <SignatureSimulation />}
                             {activeTab === 'fhe' && <FHESimulation />}
                             {activeTab === 'hybrid' && <HybridMigration />}
+<<<<<<< HEAD
                             {activeTab === 'quantum' && <QuantumThreatTab />}
                             {activeTab === 'scoring' && <SecurityScoringTab />}
                             {activeTab === 'mpc' && <MPCHEDemoTab />}
                             {activeTab === 'sectors' && <SectorBenchmarksTab />}
+=======
+>>>>>>> origin/main
                             {activeTab === 'enterprise' && <EnterpriseExamples />}
                         </div>
                         
                         <div className="mt-8 text-center text-gray-500 text-sm">
+<<<<<<< HEAD
                             <p>PQC-FHE Integration v3.2.0 | liboqs + DESILO FHE + MPC-HE + Qiskit</p>
+=======
+                            <p>PQC-FHE Integration v2.3.5 | liboqs + DESILO FHE</p>
+>>>>>>> origin/main
                             <p className="mt-1"><a href="/docs" className="text-blue-500 hover:underline">API Docs</a> | <a href="https://github.com/open-quantum-safe/liboqs-python" target="_blank" className="text-blue-500 hover:underline ml-2">liboqs-python</a> | <a href="https://fhe.desilo.dev" target="_blank" className="text-blue-500 hover:underline ml-2">DESILO FHE</a></p>
                         </div>
                     </div>

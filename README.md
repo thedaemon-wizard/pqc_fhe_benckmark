@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # PQC-FHE Integration Platform v3.2.0
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -188,11 +189,58 @@ Production-ready framework combining **Post-Quantum Cryptography (PQC)** with **
 - Kubernetes Helm chart with HPA and GPU workers
 - Prometheus monitoring with pre-configured alerts
 - File-based logging with rotation
+=======
+# PQC-FHE Integration Platform
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
+[![NIST PQC](https://img.shields.io/badge/NIST-PQC%20Standardized-green.svg)](https://csrc.nist.gov/projects/post-quantum-cryptography)
+[![Kubernetes](https://img.shields.io/badge/Kubernetes-Helm%20Chart-326ce5.svg)](https://helm.sh/)
+[![Prometheus](https://img.shields.io/badge/Prometheus-Monitoring-e6522c.svg)](https://prometheus.io/)
+
+Production-ready framework combining **Post-Quantum Cryptography (PQC)** with **Fully Homomorphic Encryption (FHE)** for enterprise security applications.
+
+## Documentation
+
+- [Technical Report (PDF)](docs/PQC_FHE_Technical_Report_v2.3.5_Enterprise.pdf)
+- [Technical Report (Word)](docs/PQC_FHE_Technical_Report_v2.3.5_Enterprise.docx)
+- [CHANGELOG](CHANGELOG.md)
+
+## Video
+
+- [Section 1](https://drive.google.com/file/d/1yPIf4EWddI6nD4Xd5RF3UwH_bXOq-4qE/view?usp=drive_link)
+- [Section 2](https://drive.google.com/file/d/1WUafzAYjmubT_qIq2G4lYlFSjbfrkwnl/view?usp=drive_link)
+- [Section 3](https://drive.google.com/file/d/18CWyii9InBklhEBMzCWt5_RkETTETOYs/view?usp=drive_link)
+- [Section 4](https://drive.google.com/file/d/1zrcNjU4gknQpjtrv9c1FlFMpoxcazbro/view?usp=drive_link)
+- [Section 5](https://drive.google.com/file/d/1ZaJyMkqVUhZHdRJ0kBdEWDyZasM2m151/view?usp=drive_link)
+
+## What's New in v2.3.5 Complete
+
+🔐 **Hybrid X25519 + ML-KEM Key Exchange**
+- Defense-in-depth security combining classical and post-quantum cryptography
+- IETF draft-ietf-tls-ecdhe-mlkem compliant
+
+☸️ **Kubernetes Deployment**
+- Production-ready Helm chart
+- Horizontal Pod Autoscaling (2-10 replicas)
+- GPU worker support with NVIDIA device plugin
+
+📊 **Monitoring & Observability**
+- Prometheus ServiceMonitor integration
+- Pre-configured alerting rules
+- Grafana dashboard support
+
+📝 **File-Based Logging**
+- Rotating log files (10MB max, 5 backups)
+- Separate error and access logs
+- Configurable log levels
+>>>>>>> origin/main
 
 ## Key Features
 
 | Feature | Technology | Status |
 |---------|------------|--------|
+<<<<<<< HEAD
 | Post-Quantum KEM | ML-KEM-512/768/1024 (FIPS 203) | Production |
 | Post-Quantum Signatures | ML-DSA-44/65/87 (FIPS 204) | Production |
 | Hybrid Key Exchange | X25519 + ML-KEM-768 | Production |
@@ -203,6 +251,17 @@ Production-ready framework combining **Post-Quantum Cryptography (PQC)** with **
 | GPU Acceleration | CUDA 13.0 / RTX 6000 PRO | **v3.0.0** |
 | Kubernetes Deployment | Helm Chart | Production |
 | Monitoring | Prometheus + Grafana | Production |
+=======
+| Post-Quantum KEM | ML-KEM-768 (FIPS 203) | ✅ Production |
+| Post-Quantum Signatures | ML-DSA-65 (FIPS 204) | ✅ Production |
+| Hybrid Key Exchange | X25519 + ML-KEM-768 | ✅ Production |
+| Homomorphic Encryption | CKKS (DESILO FHE) | ✅ Production |
+| Kubernetes Deployment | Helm Chart | ✅ Production |
+| Monitoring | Prometheus + Grafana | ✅ Production |
+| File Logging | RotatingFileHandler | ✅ Production |
+
+
+>>>>>>> origin/main
 
 ## Quick Start
 
@@ -379,6 +438,7 @@ python -m uvicorn api.server:app
 
 ## API Endpoints
 
+<<<<<<< HEAD
 ### Quantum Threat Assessment (v3.0.0)
 
 | Endpoint | Method | Description |
@@ -406,6 +466,9 @@ python -m uvicorn api.server:app
 | `/mpc-he/demo/{demo_type}` | POST | Run MPC-HE demo (linear_regression/classification/statistics) |
 
 ### Hybrid Key Exchange
+=======
+### Hybrid Key Exchange (v2.3.5)
+>>>>>>> origin/main
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
@@ -433,6 +496,7 @@ python -m uvicorn api.server:app
 | `/fhe/add` | POST | Homomorphic addition |
 | `/fhe/multiply` | POST | Homomorphic multiplication |
 
+<<<<<<< HEAD
 ### Extended Benchmarks (v3.0.0)
 
 | Endpoint | Method | Description |
@@ -466,11 +530,14 @@ python -m uvicorn api.server:app
 | `/benchmarks/sector/{sector}` | GET | Per-sector benchmarks |
 | `/benchmarks/sector-all` | GET | All-sector combined benchmarks |
 
+=======
+>>>>>>> origin/main
 ## Project Structure
 
 ```
 pqc_fhe_benckmark/
 ├── api/
+<<<<<<< HEAD
 │   └── server.py              # FastAPI server (v3.2.0, 64 endpoints)
 ├── src/
 │   ├── pqc_fhe_integration.py # Core PQC + FHE integration
@@ -527,12 +594,46 @@ pqc_fhe_benckmark/
 - desilofhe / desilofhe-cu130 (FHE, optional for GPU)
 - numpy >= 1.21
 - fastapi >= 0.100, uvicorn >= 0.23
+=======
+│   └── server.py              # FastAPI server (v2.3.5)
+├── kubernetes/
+│   └── helm/pqc-fhe/          # Helm chart
+│       ├── Chart.yaml
+│       ├── values.yaml
+│       └── templates/
+│           ├── deployment.yaml
+│           ├── service.yaml
+│           ├── hpa.yaml
+│           ├── servicemonitor.yaml
+│           └── ...
+├── monitoring/
+│   └── prometheus.yml         # Prometheus config
+├── web_ui/
+│   └── index.html             # React Web UI
+├── docs/
+│   ├── PQC_FHE_Technical_Report_v2.3.5_Complete.pdf
+│   └── PQC_FHE_Technical_Report_v2.3.5_Complete.docx
+├── logs/                      # Log files (auto-created)
+│   ├── pqc_fhe_server.log
+│   ├── pqc_fhe_error.log
+│   └── pqc_fhe_access.log
+└── README.md
+```
+
+## Requirements
+
+- Python 3.9+
+- liboqs-python (build from source)
+- cryptography (for X25519)
+- desilofhe (FHE library)
+>>>>>>> origin/main
 - Kubernetes 1.24+ (for Helm deployment)
 
 ## References
 
 1. NIST FIPS 203: ML-KEM Standard (August 2024)
 2. NIST FIPS 204: ML-DSA Standard (August 2024)
+<<<<<<< HEAD
 3. NIST FIPS 205: SLH-DSA Standard (August 2024)
 4. NIST IR 8547: Transition to Post-Quantum Cryptography Standards (November 2024)
 5. NIST IR 8545: HQC Selection as 4th-round KEM (March 2025)
@@ -586,6 +687,16 @@ pqc_fhe_benckmark/
 - Comprehensive test suite (65 tests)
 
 ### v2.3.5 (2025-12-30)
+=======
+3. IETF draft-ietf-tls-ecdhe-mlkem: Hybrid Key Exchange
+4. NIST IR 8547: PQC Migration Guidelines
+5. DESILO FHE Library: https://fhe.desilo.dev/
+6. Kubernetes Helm: https://helm.sh/docs/
+
+## Version History
+
+### v2.3.5 Complete (2025-12-30)
+>>>>>>> origin/main
 - X25519 + ML-KEM hybrid key exchange
 - Kubernetes Helm chart with GPU support
 - Prometheus monitoring and alerting
@@ -602,4 +713,8 @@ MIT License - see [LICENSE](LICENSE) for details.
 
 ---
 
+<<<<<<< HEAD
 **Security Notice**: This platform implements NIST-standardized post-quantum cryptography (FIPS 203/204/205) with quantum threat assessment, NIST IR 8547 compliance scoring, and privacy-preserving multi-party computation.
+=======
+**Security Notice**: This platform implements NIST-standardized post-quantum cryptography with Kubernetes deployment support and comprehensive monitoring.
+>>>>>>> origin/main

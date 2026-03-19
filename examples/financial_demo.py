@@ -179,7 +179,11 @@ def get_fhe_engine():
         
         class RealFHEEngine:
             def __init__(self):
+<<<<<<< HEAD
                 self.engine = desilofhe.Engine(mode='gpu', slot_count=2**14, thread_count=512)
+=======
+                self.engine = desilofhe.Engine(mode='cpu', slot_count=2**14)
+>>>>>>> origin/main
                 self.secret_key = self.engine.create_secret_key()
                 self.public_key = self.engine.create_public_key(self.secret_key)
                 self.relin_key = self.engine.create_relinearization_key(self.secret_key)

@@ -1,5 +1,9 @@
 """
+<<<<<<< HEAD
 PQC-FHE Integration Library v3.2.0
+=======
+PQC-FHE Integration Library v2.1.2
+>>>>>>> origin/main
 ==================================
 
 Enterprise-grade Post-Quantum Cryptography + Fully Homomorphic Encryption Integration
@@ -31,7 +35,11 @@ References:
 
 Author: Amon (Quantum Computing Specialist)
 License: MIT
+<<<<<<< HEAD
 Version: 3.2.0
+=======
+Version: 2.1.2
+>>>>>>> origin/main
 """
 
 import os
@@ -174,7 +182,11 @@ class FHEConfig:
     scale_bits: int = 40
     num_scales: int = 60
     security_bits: int = 128
+<<<<<<< HEAD
     mode: str = 'gpu'                      # GPU-first; falls back to CPU if unavailable
+=======
+    mode: str = 'cpu'
+>>>>>>> origin/main
     thread_count: int = 0
     use_bootstrap: bool = True
     use_full_bootstrap_key: bool = True
@@ -1414,11 +1426,15 @@ __all__ = [
     "create_gpu_accelerated_system",
 ]
 
+<<<<<<< HEAD
 try:
     from .version_loader import get_version
     __version__ = get_version('core')
 except ImportError:
     __version__ = "3.2.0"
+=======
+__version__ = "2.1.2"
+>>>>>>> origin/main
 
 
 if __name__ == "__main__":

@@ -1,10 +1,18 @@
+<<<<<<< HEAD
 # PQC-FHE Integration Portfolio v3.2.0
+=======
+# PQC-FHE Integration Portfolio v2.1.2
+>>>>>>> origin/main
 # Requirements file for pip installation
 
 # =============================================================================
 # Core Dependencies
 # =============================================================================
+<<<<<<< HEAD
 numpy>=1.21.0
+=======
+numpy>=1.21.0,<2.0.0
+>>>>>>> origin/main
 
 # =============================================================================
 # Post-Quantum Cryptography
@@ -60,6 +68,7 @@ numpy>=1.21.0
 #              pip install desilofhe-cu121  (CUDA 12.1)
 #
 # Note: Install separately after requirements.txt
+<<<<<<< HEAD
 #
 # v3.0.0: MPC-HE multiparty features require desilofhe with use_multiparty=True
 # GPU benchmarks require desilofhe-cu130 for CUDA 13.0
@@ -76,6 +85,10 @@ desilofhe-cu130>=1.10.0  # For CUDA 13.0 GPU benchmarks
 qiskit>=1.0.0
 qiskit-aer>=0.14.0
 
+=======
+# =============================================================================
+
+>>>>>>> origin/main
 # =============================================================================
 # Classical Cryptography (Hybrid Mode)
 # =============================================================================
@@ -133,4 +146,8 @@ yfinance>=0.2.36
 # Reference: https://vitaldb.net/
 # DOI: 10.1038/s41597-022-01411-5
 # Optional: pip install vitaldb
+<<<<<<< HEAD
 vitaldb>=1.0.0
+=======
+# vitaldb>=1.0.0
+>>>>>>> origin/main
