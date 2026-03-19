@@ -9,6 +9,12 @@
 
 Production-ready framework combining **Post-Quantum Cryptography (PQC)** with **Fully Homomorphic Encryption (FHE)** for enterprise security applications, featuring quantum threat simulation, security scoring, and multi-party computation.
 
+## Documentation
+
+- [Technical Report v3.2.0 (PDF)](docs/PQC_FHE_Technical_Report_v3.2.0_Enterprise.pdf)
+- [Technical Report v3.2.0 (Word)](docs/PQC_FHE_Technical_Report_v3.2.0_Enterprise.docx)
+- [CHANGELOG](CHANGELOG.md)
+
 ## What's New in v3.2.0
 
 ### 2026 Research-Based Accuracy Corrections
@@ -86,38 +92,48 @@ Production-ready framework combining **Post-Quantum Cryptography (PQC)** with **
 #### Critical Security Updates
 - **CKKS NTT SPA (CRITICAL)**: Single-trace neural network attack achieves 98.6% key extraction accuracy (arXiv:2505.11058). Random delay insertion INEFFECTIVE. Requires combined masking+shuffling+constant-time NTT or hardware isolation (TEE/SGX).
 - **Threshold FHE CPAD (CRITICAL)**: Full key recovery in < 1 hour without smudging noise (CEA 2025). MPC-HE `individual_decrypt()` enforces smudging noise by default.
-- **ML-DSA Rejected Signatures Attack (TCHES 2025)**: First practical side-channel key recovery targeting ML-DSA rejection sampling. Private key recovered in seconds with 100% success on ARM Cortex-M4.
-- **ML-DSA Public-Based Template Attack (IEEE DATE 2026)**: No clone device needed; templates built from publicly available data only (ePrint 2026/056).
-- **GlitchFHE (USENIX Security 2025)**: Fault injection on CKKS targeting non-NTT domain operations in Microsoft SEAL.
+- **CPAD Impossibility for HELLHO schemes** (ePrint 2026/203): Proves NO BFV/BGV/CKKS basic variant can achieve IND-CPA^D security. Fundamental limitation.
+- **ML-DSA Rejected Signatures Attack (TCHES 2025)**: Rejection sampling leakage enables full key recovery (TCHES Vol. 2025 No. 4, pp. 817-847).
+- **ML-DSA**: 6+ attack papers in 2025-2026 — rejection sampling (TCHES 2025), factor-graph (ePrint 2025/582), masked y leakage (ePrint 2025/276), hardware CPA (HOST 2025), implicit hint (SAC 2025), template attack (DATE 2026, ePrint 2026/056).
+- **GlitchFHE (USENIX Security 2025)**: Single corrupted RNS limb breaks FHE confidentiality. Covers CKKS and BFV on SEAL.
+- **SNDL/HNDL Active Threat**: DHS, UK NCSC, ENISA, Australian ACSC all confirm adversaries currently harvesting encrypted data.
 
 #### NIST Standards & Guidance
-- **FIPS 204 Errata**: Updated February 23, 2026. Minor corrections to ML-DSA specification.
-- **SP 800-227 Finalized**: September 18, 2025. KEM guidance covering composite KEM, KEM-DEM, authenticated key establishment.
+- **FIPS 203/204 Errata**: Both updated February 2026. Minor corrections.
+- **SP 800-227 Finalized**: September 18, 2025. Covers composite KEM (X-Wing: ML-KEM + X25519), ephemeral key one-time use.
 - **NIST IR 8547**: Still in draft (IPD Nov 2024). Deprecation targets: 112-bit by 2031, all quantum-vulnerable by 2035.
 - **FIPS 206 (FN-DSA/FALCON)**: IPD pending internal clearance. Final standard expected late 2026/early 2027. Compact signatures (~666 bytes).
-- **HQC Draft Standard (2026)**: NIST draft expected 2026, final 2027. Code-based backup KEM for ML-KEM.
+- **HQC Draft Standard**: Expected early 2026, final 2027. Code-based backup KEM for ML-KEM (NIST IR 8545).
+- **CSWP 39 (Crypto Agility)**: Finalized December 19, 2025. Maturity model, CBOM practices, policy-mechanism separation.
+- **CSWP 48 (PQC Migration Mappings)**: IPD September 2025. Maps to CSF 2.0 and SP 800-53.
+- **Additional Signature Onramp Round 2**: 14 candidates — CROSS, FAEST, HAWK, LESS, MAYO, Mirath, MQOM, PERK, QR-UOV, RYDE, SDitH, SNOVA, SQIsign, UOV. Round 3 down-select in 2026.
 
 #### Quantum Hardware Progress
-- IBM Quantum: Kookaburra (2026, qLDPC + LPU), Starling (2028-2029, 200 logical qubits), Blue Jay (2033+, 2000+ logical qubits). Flamingo removed from roadmap.
-- Google Quantum AI: Quantum Echoes (Oct 2025) 13,000x faster than classical. Verifiable quantum advantage demonstrated.
-- **Microsoft Majorana 1** (Feb 2025): First topological qubit chip. 8-qubit processor; millions could fit on a single wafer.
-- **Quantinuum Helios** (Nov 2025/Mar 2026): 98 trapped-ion qubits, 94 logical qubits, 2:1 physical-to-logical ratio. $10B valuation.
-- **Magic State Distillation**: Optimal scaling achieved (gamma=0, Nature Physics Nov 2025). QuEra/Harvard first experimental demonstration (Nature Jul 2025).
+- **IBM Kookaburra** (Mar 2026): 1,386-qubit processor, 4,158 qubits via 3-chip link. qLDPC codes reduce overhead up to 90%. Starling (2029, 200 logical qubits, 100M gates), Blue Jay (2033, 2000+ logical qubits).
+- Google Quantum AI: Willow (105 qubits, below-threshold QEC). Quantum Echoes (Oct 2025) 13,000x faster than classical.
+- **Microsoft Majorana 1** (Feb 2025): 8 topological qubits via topoconductors. Unvalidated — 2018 paper retracted. High-risk/high-reward.
+- **Quantinuum Helios** (Nov 2025): 98 physical qubits → 94 logical GHZ, 48 fully error-corrected (2:1), 50 error-detected. Sol (2027), Apollo (2029, fully fault-tolerant).
+- **Magic State Distillation**: Optimal scaling gamma=0 (Nature Physics Nov 2025). Low-cost 53-qubit distillation (npj QI 2026). Constant-overhead injection into qLDPC codes (arXiv:2505.06981).
+- **Q-Day Median Estimate**: 2029-2032. ECC likely falls before RSA.
 
 #### Lattice & Quantum Sieving
-- **Quantum 3-tuple Sieve**: Exponent 0.3098 → 0.2846 (Dutch team, ePrint 2025/2189). ~8% improvement.
+- **Quantum 3-tuple Sieve**: Exponent 0.3098 → 0.2846 (Dutch team, ePrint 2025/2189). ~8% improvement, ~2^25 theoretical speedup at d=1000.
 - **BKZ 3-4 bit loss**: Combined BKZ improvements reduce all lattice PQC security by 3-4 bits (Zhao & Ding 2025).
 - **Li & Nguyen (JoC 2025)**: First rigorous dynamic analysis of real BKZ algorithm.
 - **Dense Sublattice BKZ**: Cryptanalytic no-go confirmed (Ducas & Loyer, CiC 2025).
+- **VERDE AI Cryptanalysis** (2025): Transformer-based red-team attack on lattice schemes. 30% faster training vs prior SALSA approach.
 
 #### FHE & Migration
 - **GL Scheme (FHE.org 2026, Mar 8)**: 5th generation FHE by Gentry & Lee at DESILO. Native matrix multiplication for Private AI.
 - **OpenFHE v1.5.0** (Feb 26, 2026): Dev release with BFV/BGV/CKKS/TFHE/LMKCDEY.
-- **FHE GPU Acceleration**: Cheddar (ASPLOS 2026, 2-4x over prior GPU), WarpDrive (HPCA 2025, 73% instruction reduction), CAT (2173x speedup on 4090).
-- **EU PQC Roadmap** (Jun 2025): Critical infrastructure by 2030, full transition by 2035.
-- **UK NCSC**: 3-phase migration (2028/2031/2035).
-- **Japan**: 2035 PQC migration deadline aligned with US/EU.
-- **Hybrid TLS**: 38% of Cloudflare HTTPS connections use X25519+ML-KEM (Mar 2025).
+- **TFHE-rs v1.5.0** (Jan 2026): 42% faster ZK verification, MultiBit blind rotation.
+- **FHE GPU Acceleration**: Cheddar (ASPLOS 2026), WarpDrive (HPCA 2025, 73% instruction reduction), CAT (2173x speedup over CPU), Theodosian (Dec 2025, 1.45-1.83x over Cheddar).
+- **Arbitrary-Threshold FHE** (USENIX Security 2025): O(N^2+K) complexity, 3.83-15.4x speedup for 1000-party systems.
+- **NIST MPTS 2026** (Jan 2026): Threshold FHE standardization session (NIST IR 8214C category S5).
+- **EU PQC Roadmap** (Jun 2025): National plans by end 2026, hybrid pilots 2026-2027, critical infra by 2030, full by 2035. EU Quantum Act expected Q2 2026.
+- **UK NCSC** (Mar 2025): 3-phase migration — discover (by 2028), upgrade (2028-2031), complete (2031-2035).
+- **Japan CRYPTREC**: 2035 target. NEDO PQC program with PQShield/AIST/Mitsubishi/UTokyo.
+- **Hybrid TLS Adoption**: Only 8.6% of top 1M websites (F5 Labs, Jun 2025). Top 100: 42%. Banking: only 3%.
 - **JVG Algorithm (Mar 2026)**: DISMISSED — no valid quantum speedup demonstrated.
 
 #### Browser-Verified (March 2026)

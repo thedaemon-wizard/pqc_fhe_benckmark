@@ -779,4 +779,4 @@ class MLDSASimulator:
         
         # Compute t = As1 + s2
         As1 = self._matrix_vector_mul(A, s1)
-        t = [As1[i] + s2[i]
+        t = [As1[i] + s2[i] for i in range(len(As1))]
