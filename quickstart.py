@@ -1,10 +1,6 @@
 #!/usr/bin/env python3
 """
-<<<<<<< HEAD
 PQC-FHE Integration - Quick Start Demo v3.2.0
-=======
-PQC-FHE Integration - Quick Start Demo v2.1.2
->>>>>>> origin/main
 ==============================================
 
 This script demonstrates the core functionality of the PQC-FHE Integration library.
@@ -71,11 +67,7 @@ def check_liboqs_available() -> bool:
 def print_header():
     """Print demo header."""
     print("\n" + "+" + "=" * 62 + "+")
-<<<<<<< HEAD
     print("|     PQC-FHE Integration - Quick Start Demo v3.2.0           |")
-=======
-    print("|     PQC-FHE Integration - Quick Start Demo v2.1.2           |")
->>>>>>> origin/main
     print("|     Post-Quantum Cryptography + Homomorphic Encryption      |")
     print("+" + "=" * 62 + "+")
     print()

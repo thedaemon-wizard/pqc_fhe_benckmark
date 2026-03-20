@@ -2,7 +2,6 @@
 
 All notable changes to the PQC-FHE Integration Platform.
 
-<<<<<<< HEAD
 ## [3.2.0] - 2026-03-19
 
 ### Fixed
@@ -462,8 +461,6 @@ All notable changes to the PQC-FHE Integration Platform.
 - Added Qiskit 2.3.1 + qiskit-aer 0.17.2 to dependencies
 - Version numbers synchronized across pyproject.toml, __init__.py, api/server.py
 
-=======
->>>>>>> origin/main
 ## [2.3.5] - 2025-12-30
 
 ### Added

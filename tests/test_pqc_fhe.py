@@ -61,7 +61,6 @@ except ImportError:
     CRYPTOGRAPHY_AVAILABLE = False
     logger.warning("cryptography not available - hybrid tests will be skipped")
 
-<<<<<<< HEAD
 try:
     from qiskit import QuantumCircuit
     from qiskit_aer import AerSimulator
@@ -71,8 +70,6 @@ except ImportError:
     QISKIT_AVAILABLE = False
     logger.warning("Qiskit not available - quantum verification tests will be skipped")
 
-=======
->>>>>>> origin/main
 
 # =============================================================================
 # PQC KEY MANAGEMENT TESTS
@@ -232,11 +229,7 @@ class TestFHEOperations(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         """Initialize FHE engine once for all tests"""
-<<<<<<< HEAD
         cls.engine = desilofhe.Engine(mode='gpu', use_bootstrap=True, slot_count=2**14, thread_count=512)
-=======
-        cls.engine = desilofhe.Engine(mode='cpu', slot_count=2**14)
->>>>>>> origin/main
         cls.secret_key = cls.engine.create_secret_key()
         cls.public_key = cls.engine.create_public_key(cls.secret_key)
         cls.relin_key = cls.engine.create_relinearization_key(cls.secret_key)
@@ -357,7 +350,6 @@ class TestFHEOperations(unittest.TestCase):
     def test_rotation(self):
         """Test slot rotation"""
         data = [1.0, 2.0, 3.0, 4.0, 5.0]
-<<<<<<< HEAD
 
         ct = self.engine.encrypt(data, self.public_key)
         # DESILO rotate(delta=-1) shifts slots left: slot[i] = old_slot[i+1]
@@ -365,14 +357,6 @@ class TestFHEOperations(unittest.TestCase):
         decrypted = self.engine.decrypt(ct_rot, self.secret_key)
 
         # After left rotation by 1, element 0 should contain original element 1
-=======
-        
-        ct = self.engine.encrypt(data, self.public_key)
-        ct_rot = self.engine.rotate(ct, self.rotation_key, 1)
-        decrypted = self.engine.decrypt(ct_rot, self.secret_key)
-        
-        # After rotation by 1, element 0 should contain original element 1
->>>>>>> origin/main
         self.assertAlmostEqual(decrypted[0], data[1], places=4)
         logger.info("Rotation test passed")
     
@@ -525,11 +509,7 @@ class TestIntegration(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         """Initialize systems for integration tests"""
-<<<<<<< HEAD
         cls.engine = desilofhe.Engine(mode='gpu', use_bootstrap=True, slot_count=2**14, thread_count=512)
-=======
-        cls.engine = desilofhe.Engine(mode='cpu', slot_count=2**14)
->>>>>>> origin/main
         cls.secret_key = cls.engine.create_secret_key()
         cls.public_key = cls.engine.create_public_key(cls.secret_key)
         cls.relin_key = cls.engine.create_relinearization_key(cls.secret_key)
@@ -742,7 +722,6 @@ class TestPerformanceRegression(unittest.TestCase):
 
 
 # =============================================================================
-<<<<<<< HEAD
 # QUANTUM THREAT SIMULATOR TESTS (v3.0.0)
 # =============================================================================
 
@@ -2265,20 +2244,10 @@ class TestSectorCircuitBenchmark(unittest.TestCase):
 
 import time
 
-=======
-# MAIN
-# =============================================================================
-
->>>>>>> origin/main
 def run_tests():
     """Run all tests with verbose output"""
     loader = unittest.TestLoader()
     suite = unittest.TestSuite()
-<<<<<<< HEAD
-
-=======
-    
->>>>>>> origin/main
     # Add test classes
     suite.addTests(loader.loadTestsFromTestCase(TestPQCKeyManagement))
     suite.addTests(loader.loadTestsFromTestCase(TestFHEOperations))
@@ -2286,7 +2255,6 @@ def run_tests():
     suite.addTests(loader.loadTestsFromTestCase(TestIntegration))
     suite.addTests(loader.loadTestsFromTestCase(TestSecurity))
     suite.addTests(loader.loadTestsFromTestCase(TestPerformanceRegression))
-<<<<<<< HEAD
 
     # v3.0.0 test classes
     suite.addTests(loader.loadTestsFromTestCase(TestQuantumThreatSimulator))
@@ -2315,13 +2283,6 @@ def run_tests():
     runner = unittest.TextTestRunner(verbosity=2)
     result = runner.run(suite)
 
-=======
-    
-    # Run tests
-    runner = unittest.TextTestRunner(verbosity=2)
-    result = runner.run(suite)
-    
->>>>>>> origin/main
     return result
 
 

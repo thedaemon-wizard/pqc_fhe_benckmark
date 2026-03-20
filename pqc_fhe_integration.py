@@ -1,9 +1,5 @@
 """
-<<<<<<< HEAD
 PQC-FHE Integration Library v3.2.0
-=======
-PQC-FHE Integration Library v2.1.2
->>>>>>> origin/main
 ==================================
 
 Enterprise-grade Post-Quantum Cryptography + Fully Homomorphic Encryption Integration
@@ -35,11 +31,7 @@ References:
 
 Author: Amon (Quantum Computing Specialist)
 License: MIT
-<<<<<<< HEAD
 Version: 3.2.0
-=======
-Version: 2.1.2
->>>>>>> origin/main
 """
 
 import os

@@ -1,10 +1,6 @@
 #!/usr/bin/env python3
 """
-<<<<<<< HEAD
 Enterprise Data Module - Real Data Sources
-=======
-Enterprise Data Module v2.3.0 - Real Data Sources
->>>>>>> origin/main
 ==================================================
 
 Provides real-world data from verified sources for enterprise use case demonstrations.
@@ -46,11 +42,8 @@ All external data sources retain their original licenses.
 import hashlib
 import time
 import logging
-<<<<<<< HEAD
 import os
 from pathlib import Path
-=======
->>>>>>> origin/main
 from datetime import datetime, timedelta
 from typing import List, Dict, Any, Optional, Tuple
 from dataclasses import dataclass, field
@@ -59,7 +52,6 @@ import json
 
 logger = logging.getLogger(__name__)
 
-<<<<<<< HEAD
 # Dynamic version loading
 def _load_enterprise_version() -> str:
     _root = Path(__file__).resolve().parent.parent
@@ -72,8 +64,6 @@ def _load_enterprise_version() -> str:
 
 _MODULE_VERSION = _load_enterprise_version()
 
-=======
->>>>>>> origin/main
 
 # =============================================================================
 # DATA SOURCE CITATIONS
@@ -944,11 +934,7 @@ def verify_all_data_sources() -> Dict[str, Any]:
     """
     return {
         "verification_timestamp": datetime.now().isoformat(),
-<<<<<<< HEAD
         "version": _MODULE_VERSION,
-=======
-        "version": "2.3.0",
->>>>>>> origin/main
         "sources": {
             "healthcare": HealthcareDataGenerator.verify_data_integrity(),
             "finance": FinanceDataGenerator.verify_data_integrity(),
@@ -968,11 +954,7 @@ def get_all_citations() -> Dict[str, Any]:
         Complete citation information
     """
     return {
-<<<<<<< HEAD
         "module_version": _MODULE_VERSION,
-=======
-        "module_version": "2.3.0",
->>>>>>> origin/main
         "last_updated": "2025-12-30",
         "citations": DATA_CITATIONS,
         "usage_requirements": {

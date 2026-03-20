@@ -1,16 +1,11 @@
 #!/usr/bin/env python3
 """
-<<<<<<< HEAD
 PQC-FHE Integration REST API Server v3.2.0
-=======
-PQC-FHE Integration REST API Server v2.3.5
->>>>>>> origin/main
 ==========================================
 
 FastAPI-based REST API for Post-Quantum Cryptography and 
 Fully Homomorphic Encryption operations.
 
-<<<<<<< HEAD
 v3.2.0 Updates:
 - Added X25519 + ML-KEM hybrid key exchange endpoints
 - Migration strategy API for enterprise planning
@@ -19,12 +14,6 @@ v3.2.0 Updates:
 - Noise-aware quantum simulation endpoints
 - Side-channel risk assessment endpoints
 - Dynamic version management via version.json
-=======
-v2.3.5 Updates:
-- Added X25519 + ML-KEM hybrid key exchange endpoints
-- Migration strategy API for enterprise planning
-- Algorithm comparison endpoint
->>>>>>> origin/main
 
 Usage:
     uvicorn api.server:app --reload
@@ -52,10 +41,7 @@ Installation:
 
 import os
 import sys
-<<<<<<< HEAD
 import json
-=======
->>>>>>> origin/main
 import time
 import secrets
 import hashlib
@@ -66,7 +52,6 @@ from typing import Optional, List, Dict, Any
 from datetime import datetime
 from contextlib import asynccontextmanager
 
-<<<<<<< HEAD
 # ---------------------------------------------------------------------------
 # Dynamic version loading from version.json
 # ---------------------------------------------------------------------------
@@ -82,8 +67,6 @@ def _load_api_version() -> str:
 
 API_VERSION = _load_api_version()
 
-=======
->>>>>>> origin/main
 # Suppress liboqs auto-install behavior
 os.environ['OQS_PERMIT_UNSUPPORTED_ARCHITECTURE'] = '1'
 
@@ -186,11 +169,7 @@ def setup_logging(log_dir: str = "logs", log_level: str = "INFO"):
 # Initialize logging
 logger = setup_logging()
 logger.info("=" * 60)
-<<<<<<< HEAD
 logger.info(f"PQC-FHE Integration API Server {API_VERSION}")
-=======
-logger.info("PQC-FHE Integration API Server v2.3.5")
->>>>>>> origin/main
 logger.info("Logging initialized - logs saved to ./logs/")
 logger.info("=" * 60)
 
@@ -640,11 +619,7 @@ def _get_pqc_instance():
 class HealthResponse(BaseModel):
     status: str = "healthy"
     timestamp: str
-<<<<<<< HEAD
     version: str = API_VERSION
-=======
-    version: str = "2.3.0"
->>>>>>> origin/main
     components: Dict[str, str]
     ciphertext_count: int = 0
 
@@ -847,11 +822,7 @@ class FHEOperationResponse(BaseModel):
 async def lifespan(app: FastAPI):
     """Application lifespan handler."""
     logger.info("=" * 60)
-<<<<<<< HEAD
     logger.info(f"PQC-FHE Integration API Server {API_VERSION}")
-=======
-    logger.info("PQC-FHE Integration API Server v2.3.3")
->>>>>>> origin/main
     logger.info("=" * 60)
     
     liboqs_available = _check_liboqs_available()
@@ -893,11 +864,7 @@ The Web UI provides a user-friendly interface for:
 - ML-KEM Key Exchange Simulation (Alice ↔ Bob)
 - ML-DSA Digital Signature (Sign & Verify)
 - FHE Encrypted Computation (Encrypt → Compute → Decrypt)
-<<<<<<< HEAD
 - **Hybrid X25519 + ML-KEM Migration Strategy**
-=======
-- **Hybrid X25519 + ML-KEM Migration Strategy** (NEW in v2.3.5)
->>>>>>> origin/main
 
 ## Features
 
@@ -905,11 +872,7 @@ The Web UI provides a user-friendly interface for:
 - **ML-KEM-768**: Key Encapsulation Mechanism (NIST FIPS 203)
 - **ML-DSA-65**: Digital Signature Algorithm (NIST FIPS 204)
 
-<<<<<<< HEAD
 ### Hybrid Cryptography
-=======
-### Hybrid Cryptography (NEW in v2.3.5)
->>>>>>> origin/main
 - **X25519 + ML-KEM-768**: Defense-in-depth key exchange
 - **Migration Strategy**: Phased approach to PQC adoption
 - **IETF Compliant**: draft-ietf-tls-ecdhe-mlkem pattern
@@ -919,11 +882,7 @@ The Web UI provides a user-friendly interface for:
 - **Bootstrap**: Unlimited computation depth
 - **GPU Acceleration**: CUDA-powered operations
 
-<<<<<<< HEAD
 ## Smart Default Feature
-=======
-## Smart Default Feature (v2.3.3+)
->>>>>>> origin/main
 
 **No need to copy ciphertext IDs manually!**
 
@@ -946,11 +905,7 @@ The API detects when example/placeholder IDs are used and automatically selects 
 - **desilofhe**: Required for FHE operations (CKKS scheme)
 - Ciphertexts are stored in memory and cleared on server restart
 """,
-<<<<<<< HEAD
     version=API_VERSION,
-=======
-    version="2.3.5",
->>>>>>> origin/main
     lifespan=lifespan
 )
 
@@ -1003,11 +958,7 @@ async def root():
     """API root endpoint."""
     return {
         "name": "PQC-FHE Integration API",
-<<<<<<< HEAD
         "version": API_VERSION,
-=======
-        "version": "2.3.0",
->>>>>>> origin/main
         "docs": "/docs",
         "health": "/health",
         "ciphertexts": "/fhe/ciphertexts"

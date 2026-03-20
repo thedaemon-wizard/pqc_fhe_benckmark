@@ -358,11 +358,7 @@ def benchmark_pqc_sig(
 def benchmark_fhe_operations(
     iterations: int = 100,
     slot_counts: List[int] = None,
-<<<<<<< HEAD
     mode: str = 'gpu'
-=======
-    mode: str = 'cpu'
->>>>>>> origin/main
 ) -> List[BenchmarkResult]:
     """
     Benchmark FHE operations
@@ -471,11 +467,7 @@ def benchmark_fhe_operations(
 def run_full_benchmark(
     iterations: int = 100,
     include_fhe: bool = True,
-<<<<<<< HEAD
     fhe_mode: str = 'gpu',
-=======
-    fhe_mode: str = 'cpu',
->>>>>>> origin/main
     output_file: str = None
 ) -> BenchmarkSuite:
     """
@@ -674,7 +666,6 @@ def benchmark_classical_comparison(iterations: int = 100) -> BenchmarkSuite:
     return suite
 
 
-<<<<<<< HEAD
 # =============================================================================
 # EXTENDED BENCHMARKS (v3.0.0)
 # =============================================================================
@@ -1084,21 +1075,6 @@ if __name__ == '__main__':
             output_file=args.output,
         )
     elif args.comparison:
-=======
-if __name__ == '__main__':
-    import argparse
-    
-    parser = argparse.ArgumentParser(description='PQC-FHE Benchmarks')
-    parser.add_argument('--iterations', '-n', type=int, default=100)
-    parser.add_argument('--no-fhe', action='store_true', help='Skip FHE benchmarks')
-    parser.add_argument('--fhe-mode', choices=['cpu', 'gpu'], default='cpu')
-    parser.add_argument('--output', '-o', default='benchmark_results.json')
-    parser.add_argument('--comparison', action='store_true', help='Run classical comparison')
-    
-    args = parser.parse_args()
-    
-    if args.comparison:
->>>>>>> origin/main
         suite = benchmark_classical_comparison(iterations=args.iterations)
     else:
         suite = run_full_benchmark(
