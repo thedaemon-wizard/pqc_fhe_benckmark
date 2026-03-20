@@ -2,9 +2,58 @@
 
 All notable changes to the PQC-FHE Integration Platform.
 
-## [3.2.0] - 2026-03-19
+## [3.2.0] - 2026-03-20
 
 ### Fixed
+- **GPU Not Used for Circuit Execution**: All circuit verifiers (ShorCircuitVerifier,
+  GroverCircuitVerifier, NoiseAwareQuantumSimulator, EnhancedNoiseSimulator,
+  ECCDiscreteLogCircuit) now use `AerSimulator(device='GPU')` with automatic CPU
+  fallback. Previously all used CPU-only `AerSimulator()` despite GPU detection.
+  Result: ~25% speedup (Healthcare: 119.9s→89.5s).
+- **Shor Trivial GCD UnboundLocalError**: Fixed `UnboundLocalError` for
+  `original_gate_count` when Shor's algorithm finds factors via trivial GCD
+  (e.g., N=143 with base sharing a factor). Added default initializations for
+  `original_gate_count`, `optimized_gate_count`, and `original_depth`.
+- **Test QFT Gate Check**: Updated `test_shor_circuit_has_qft` to accept
+  Pass Manager decomposed basis gates (`sx`+`rz`) in addition to `h` gates.
+- **WebUI Sector Switch Bug**: Switching sectors now properly clears circuit results
+  and All-Sector Circuit Comparison data (previously only performance/quantum security
+  results were cleared).
+- **WebUI Null Safety**: Fixed `total_execution_time_ms` null reference errors in
+  circuit benchmark and All-Sector comparison displays using nullish coalescing.
+- **Circuit Benchmark Error Handling**: Added proper error state management and
+  user-facing error display for circuit benchmark and All-Sector circuit operations.
+
+### Added
+- **Qiskit Pass Manager Integration (IBM Quantum Learning Recommended)**
+  - Replaced `transpile()` with `generate_preset_pass_manager()` across all circuit code
+  - Shor's algorithm: `optimization_level=2` (IBM Quantum Learning recommendation)
+  - Grover's algorithm: `optimization_level=3` (IBM Quantum Learning recommendation for deep circuits)
+  - ECC discrete log and noise simulators: `optimization_level=2`
+  - Basis gates: `['cx', 'id', 'rz', 'sx', 'x']` (standard hardware gate set)
+  - `optimization_info` dict in all circuit results: original/optimized gates, depth, reduction %
+  - Refs: IBM Quantum Learning Shor's, IBM Quantum Learning Grover's
+
+- **Circuit Visualization (Diagram Generation)**
+  - `generate_circuit_diagram()` function: matplotlib-based circuit rendering to base64 PNG
+  - 3 new API endpoints: `/quantum/circuit/shor-diagram`, `/quantum/circuit/grover-diagram`,
+    `/quantum/circuit/ecc-diagram`
+  - WebUI diagram panel: auto-fetched after circuit benchmark, shows optimized circuit diagrams
+  - Requires `pylatexenc` library (auto-installed)
+
+- **5 New Tests (Pass Manager + Circuit Diagrams)**
+  - `test_pass_manager_shor_optimization`: Shor level=2 optimization_info verification
+  - `test_pass_manager_grover_optimization`: Grover level=3 optimization_info verification
+  - `test_pass_manager_ecc_optimization`: ECC level=2 optimization_info verification
+  - `test_circuit_diagram_generation`: Base64 PNG diagram generation from QuantumCircuit
+  - `test_circuit_diagram_large_circuit_skipped`: >20 qubit circuits return None
+
+- **WebUI Optimization Info Display**
+  - Shor table: added "Opt. Gates" and "Reduction" columns
+  - Grover table: added "Opt. Gates" and "Reduction" columns
+  - ECC info: optimization gate reduction display with percentage
+
+### Fixed (previously)
 - **BKZ Block Size Estimation**: Replaced broken GSA binary search with NIST reference
   lookup table validated against Lattice Estimator. Prior formula did not converge for
   Module-LWE parameters, returning beta=1500 for all algorithms.

@@ -50,7 +50,8 @@ logger = logging.getLogger(__name__)
 
 # Feature gate for Qiskit
 try:
-    from qiskit import QuantumCircuit, QuantumRegister, ClassicalRegister, transpile
+    from qiskit import QuantumCircuit, QuantumRegister, ClassicalRegister
+    from qiskit.transpiler import generate_preset_pass_manager
     from qiskit_aer import AerSimulator
     QISKIT_AVAILABLE = True
     logger.info("Qiskit available for quantum circuit verification")
@@ -79,9 +80,10 @@ class ShorVerificationResult:
     simulator_backend: str
     attempts: int
     extrapolation_to_rsa2048: Dict[str, Any]
+    optimization_info: Optional[Dict[str, Any]] = None
 
     def to_dict(self) -> Dict[str, Any]:
-        return {
+        result = {
             'number_to_factor': self.number_to_factor,
             'found_factors': self.found_factors,
             'success': self.success,
@@ -99,6 +101,9 @@ class ShorVerificationResult:
             'attempts': self.attempts,
             'extrapolation_to_rsa2048': self.extrapolation_to_rsa2048,
         }
+        if self.optimization_info:
+            result['optimization_info'] = self.optimization_info
+        return result
 
 
 @dataclass
@@ -120,9 +125,10 @@ class GroverVerificationResult:
     execution_time_ms: float
     probability_evolution: List[Dict[str, Any]]
     extrapolation_to_aes: Dict[str, Any]
+    optimization_info: Optional[Dict[str, Any]] = None
 
     def to_dict(self) -> Dict[str, Any]:
-        return {
+        result = {
             'search_space_bits': self.search_space_bits,
             'target_state': self.target_state,
             'num_qubits': self.num_qubits,
@@ -143,6 +149,9 @@ class GroverVerificationResult:
             'probability_evolution': self.probability_evolution,
             'extrapolation_to_aes': self.extrapolation_to_aes,
         }
+        if self.optimization_info:
+            result['optimization_info'] = self.optimization_info
+        return result
 
 
 @dataclass
@@ -219,11 +228,25 @@ class ShorCircuitVerifier:
         },
     }
 
-    def __init__(self, shots: int = 4096):
+    def __init__(self, shots: int = 4096, device: str = 'GPU'):
         if not QISKIT_AVAILABLE:
             raise ImportError("Qiskit not available. Install: pip install qiskit qiskit-aer")
         self.shots = shots
-        self.backend = AerSimulator()
+        # Try GPU-accelerated backend first, fall back to CPU
+        self.device_used = 'CPU'
+        try:
+            self.backend = AerSimulator(device=device)
+            self.device_used = device
+            logger.info(f"ShorCircuitVerifier using {device} backend")
+        except Exception:
+            self.backend = AerSimulator()
+            logger.info("ShorCircuitVerifier falling back to CPU backend")
+        # IBM Quantum Learning recommends optimization_level=2 for Shor circuits
+        # Ref: https://quantum.cloud.ibm.com/learning/modules/computer-science/shors-algorithm
+        self._pass_manager = generate_preset_pass_manager(
+            optimization_level=2,
+            basis_gates=['cx', 'id', 'rz', 'sx', 'x']
+        )
 
     def factor(self, N: int, a: Optional[int] = None,
                max_attempts: int = 5) -> ShorVerificationResult:
@@ -253,6 +276,9 @@ class ShorCircuitVerifier:
         best_gate_count = {}
         total_qubits = 0
         attempt = 0
+        original_gate_count = 0
+        optimized_gate_count = 0
+        original_depth = 0
 
         bases_to_try = [a] if a is not None else list(info['bases'])
         random.shuffle(bases_to_try)
@@ -270,12 +296,16 @@ class ShorCircuitVerifier:
             # Build and run the quantum period finding circuit
             qc, n_count_actual = self._build_shor_circuit(N, base_a, n_count, n_bits)
 
-            # Transpile and get circuit statistics
-            transpiled = transpile(qc, self.backend, optimization_level=1)
+            # Transpile using Pass Manager (optimization_level=2)
+            original_depth = qc.depth()
+            original_ops = qc.count_ops()
+            original_gate_count = sum(int(v) for v in original_ops.values())
+            transpiled = self._pass_manager.run(qc)
             total_qubits = transpiled.num_qubits
             best_circuit_depth = transpiled.depth()
             ops = transpiled.count_ops()
             best_gate_count = {str(k): int(v) for k, v in ops.items()}
+            optimized_gate_count = sum(int(v) for v in ops.values())
 
             # Execute circuit
             result = self.backend.run(transpiled, shots=self.shots).result()
@@ -322,6 +352,20 @@ class ShorCircuitVerifier:
             total_qubits, best_circuit_depth, elapsed_ms, attempt,
         )
 
+        # Build optimization info
+        opt_info = {
+            'original_gates': original_gate_count,
+            'optimized_gates': optimized_gate_count,
+            'reduction_percent': round(
+                (1 - optimized_gate_count / max(original_gate_count, 1)) * 100, 1
+            ),
+            'original_depth': original_depth,
+            'optimized_depth': best_circuit_depth,
+            'optimization_level': 2,
+            'method': 'generate_preset_pass_manager',
+            'device': self.device_used,
+        }
+
         return ShorVerificationResult(
             number_to_factor=N,
             found_factors=factors,
@@ -333,9 +377,10 @@ class ShorCircuitVerifier:
             measurement_counts=all_counts,
             period_found=period_found,
             execution_time_ms=elapsed_ms,
-            simulator_backend='aer_simulator',
+            simulator_backend=f'aer_simulator_{self.device_used.lower()}',
             attempts=attempt,
             extrapolation_to_rsa2048=extrapolation,
+            optimization_info=opt_info,
         )
 
     def _build_shor_circuit(self, N: int, a: int,
@@ -585,11 +630,25 @@ class GroverCircuitVerifier:
     with real probability measurements.
     """
 
-    def __init__(self, shots: int = 4096):
+    def __init__(self, shots: int = 4096, device: str = 'GPU'):
         if not QISKIT_AVAILABLE:
             raise ImportError("Qiskit not available. Install: pip install qiskit qiskit-aer")
         self.shots = shots
-        self.backend = AerSimulator()
+        # Try GPU-accelerated backend first, fall back to CPU
+        self.device_used = 'CPU'
+        try:
+            self.backend = AerSimulator(device=device)
+            self.device_used = device
+            logger.info(f"GroverCircuitVerifier using {device} backend")
+        except Exception:
+            self.backend = AerSimulator()
+            logger.info("GroverCircuitVerifier falling back to CPU backend")
+        # IBM Quantum Learning recommends optimization_level=3 for deep Grover circuits
+        # Ref: https://quantum.cloud.ibm.com/learning/modules/computer-science/grovers
+        self._pass_manager = generate_preset_pass_manager(
+            optimization_level=3,
+            basis_gates=['cx', 'id', 'rz', 'sx', 'x']
+        )
 
     def search(self, num_qubits: int, target: Optional[int] = None,
                num_iterations: Optional[int] = None) -> GroverVerificationResult:
@@ -621,11 +680,16 @@ class GroverCircuitVerifier:
 
         # Build and run the main Grover circuit
         qc = self._build_grover_circuit(num_qubits, target, actual_iters)
-        transpiled = transpile(qc, self.backend, optimization_level=1)
+        # Transpile using Pass Manager (optimization_level=3)
+        original_depth = qc.depth()
+        original_ops = qc.count_ops()
+        original_gate_count = sum(int(v) for v in original_ops.values())
+        transpiled = self._pass_manager.run(qc)
 
         circuit_depth = transpiled.depth()
         ops = transpiled.count_ops()
         gate_count = {str(k): int(v) for k, v in ops.items()}
+        optimized_gate_count = sum(int(v) for v in ops.values())
 
         result = self.backend.run(transpiled, shots=self.shots).result()
         counts = result.get_counts()
@@ -657,6 +721,20 @@ class GroverCircuitVerifier:
             classical_probability, speedup, actual_iters, elapsed_ms,
         )
 
+        # Build optimization info
+        opt_info = {
+            'original_gates': original_gate_count,
+            'optimized_gates': optimized_gate_count,
+            'reduction_percent': round(
+                (1 - optimized_gate_count / max(original_gate_count, 1)) * 100, 1
+            ),
+            'original_depth': original_depth,
+            'optimized_depth': circuit_depth,
+            'optimization_level': 3,
+            'method': 'generate_preset_pass_manager',
+            'device': self.device_used,
+        }
+
         return GroverVerificationResult(
             search_space_bits=num_qubits,
             target_state=target_bitstring,
@@ -674,6 +752,7 @@ class GroverCircuitVerifier:
             execution_time_ms=elapsed_ms,
             probability_evolution=prob_evolution,
             extrapolation_to_aes=extrapolation,
+            optimization_info=opt_info,
         )
 
     def _build_grover_circuit(self, num_qubits: int, target: int,
@@ -767,7 +846,7 @@ class GroverCircuitVerifier:
             if k <= max_iterations and num_qubits <= 15:
                 # Run actual circuit for small qubit counts
                 qc = self._build_grover_circuit(num_qubits, target, k)
-                transpiled = transpile(qc, self.backend, optimization_level=1)
+                transpiled = self._pass_manager.run(qc)
                 shots = min(self.shots, 2048)
                 result = self.backend.run(transpiled, shots=shots).result()
                 counts = result.get_counts()
@@ -1560,13 +1639,25 @@ class NoiseAwareQuantumSimulator:
 
     DEFAULT_ERROR_RATES = [1e-3, 1e-2, 5e-2]
 
-    def __init__(self, shots: int = 4096):
+    def __init__(self, shots: int = 4096, device: str = 'GPU'):
         if not QISKIT_AVAILABLE:
             raise ImportError(
                 "Qiskit not available. Install: pip install qiskit qiskit-aer"
             )
         self.shots = shots
-        self.backend = AerSimulator()
+        # Try GPU-accelerated backend first, fall back to CPU
+        self.device_used = 'CPU'
+        try:
+            self.backend = AerSimulator(device=device)
+            self.device_used = device
+            logger.info(f"NoiseAwareQuantumSimulator using {device} backend")
+        except Exception:
+            self.backend = AerSimulator()
+            logger.info("NoiseAwareQuantumSimulator falling back to CPU backend")
+        self._pass_manager = generate_preset_pass_manager(
+            optimization_level=2,
+            basis_gates=['cx', 'id', 'rz', 'sx', 'x']
+        )
 
     def compare_ideal_vs_noisy(
         self,
@@ -1598,9 +1689,10 @@ class NoiseAwareQuantumSimulator:
         else:
             raise ValueError(f"circuit_type must be 'grover' or 'qft', got {circuit_type}")
 
-        # 1) Ideal (noiseless) execution
+        # 1) Ideal (noiseless) execution — use pass manager
+        transpiled_qc = self._pass_manager.run(qc)
         ideal_result = self.backend.run(
-            transpile(qc, self.backend), shots=self.shots
+            transpiled_qc, shots=self.shots
         ).result()
         ideal_counts = ideal_result.get_counts()
         ideal_prob = ideal_counts.get(target, 0) / self.shots
@@ -1609,9 +1701,12 @@ class NoiseAwareQuantumSimulator:
         noisy_results = {}
         for error_rate in error_rates:
             noise_model = self._build_noise_model(error_rate)
-            noisy_backend = AerSimulator(noise_model=noise_model)
+            try:
+                noisy_backend = AerSimulator(noise_model=noise_model, device=self.device_used)
+            except Exception:
+                noisy_backend = AerSimulator(noise_model=noise_model)
             noisy_result = noisy_backend.run(
-                transpile(qc, noisy_backend), shots=self.shots
+                transpiled_qc, shots=self.shots
             ).result()
             noisy_counts = noisy_result.get_counts()
             noisy_prob = noisy_counts.get(target, 0) / self.shots
@@ -1633,6 +1728,7 @@ class NoiseAwareQuantumSimulator:
             'noisy_results': noisy_results,
             'circuit_depth': qc.depth(),
             'gate_count': dict(qc.count_ops()),
+            'device': self.device_used,
             'analysis': self._analyze_noise_impact(
                 circuit_type, num_qubits, ideal_prob, noisy_results
             ),

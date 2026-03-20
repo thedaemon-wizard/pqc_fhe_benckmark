@@ -1139,12 +1139,19 @@ class TestShorVerification(unittest.TestCase):
         self.assertIn(7, result.found_factors)
 
     def test_shor_circuit_has_qft(self):
-        """Shor's circuit uses Quantum Fourier Transform (Hadamard gates)."""
+        """Shor's circuit uses QFT gates (decomposed to basis gates by Pass Manager)."""
         from src.quantum_verification import ShorCircuitVerifier
         verifier = ShorCircuitVerifier(shots=1024)
         result = verifier.factor(15)
         self.assertGreater(result.circuit_depth, 0)
-        self.assertIn('h', result.gate_count)
+        # After Pass Manager (level=2) optimization, 'h' gates are decomposed
+        # into basis gates: sx + rz. Check for these instead.
+        has_qft_gates = (
+            'h' in result.gate_count
+            or ('sx' in result.gate_count and 'rz' in result.gate_count)
+        )
+        self.assertTrue(has_qft_gates,
+                        f"Expected QFT gates (h or sx+rz) in: {result.gate_count}")
 
     def test_shor_rsa2048_extrapolation(self):
         """Extrapolation to RSA-2048 produces multi-era estimates."""
@@ -2236,6 +2243,74 @@ class TestSectorCircuitBenchmark(unittest.TestCase):
         self.assertIn('sector_risk_assessment', result['execution_summary'])
         self.assertIn('circuits_executed', result['execution_summary'])
         self.assertGreater(result['execution_summary']['circuits_executed'], 0)
+
+    def test_pass_manager_shor_optimization(self):
+        """Shor circuit should use Pass Manager (level=2) and return optimization_info."""
+        from src.quantum_verification import ShorCircuitVerifier
+        verifier = ShorCircuitVerifier(shots=100)
+        result = verifier.factor(15)
+        # Check optimization_info is present
+        result_dict = result.to_dict()
+        self.assertIn('optimization_info', result_dict)
+        opt = result_dict['optimization_info']
+        self.assertEqual(opt['optimization_level'], 2)
+        self.assertEqual(opt['method'], 'generate_preset_pass_manager')
+        self.assertIn('original_gates', opt)
+        self.assertIn('optimized_gates', opt)
+        self.assertIn('reduction_percent', opt)
+        self.assertIn('original_depth', opt)
+        self.assertIn('optimized_depth', opt)
+        # Optimized gates should be <= original (pass manager may or may not reduce)
+        self.assertGreater(opt['original_gates'], 0)
+        self.assertGreater(opt['optimized_gates'], 0)
+
+    def test_pass_manager_grover_optimization(self):
+        """Grover circuit should use Pass Manager (level=3) and return optimization_info."""
+        from src.quantum_verification import GroverCircuitVerifier
+        verifier = GroverCircuitVerifier(shots=100)
+        result = verifier.search(4)
+        result_dict = result.to_dict()
+        self.assertIn('optimization_info', result_dict)
+        opt = result_dict['optimization_info']
+        self.assertEqual(opt['optimization_level'], 3)
+        self.assertEqual(opt['method'], 'generate_preset_pass_manager')
+        self.assertGreater(opt['original_gates'], 0)
+        self.assertGreater(opt['optimized_gates'], 0)
+
+    def test_pass_manager_ecc_optimization(self):
+        """ECC circuit should use Pass Manager and return optimization_info."""
+        result = self.ecc_circuit.run_demo(field_bits=4)
+        self.assertIn('optimization_info', result)
+        opt = result['optimization_info']
+        self.assertEqual(opt['optimization_level'], 2)
+        self.assertEqual(opt['method'], 'generate_preset_pass_manager')
+        self.assertGreater(opt['original_gates'], 0)
+        self.assertGreater(opt['optimized_gates'], 0)
+
+    def test_circuit_diagram_generation(self):
+        """Circuit diagram should generate base64 PNG image."""
+        from src.sector_quantum_circuit_benchmark import generate_circuit_diagram
+        from qiskit import QuantumCircuit
+        # Simple test circuit
+        qc = QuantumCircuit(3)
+        qc.h(0)
+        qc.cx(0, 1)
+        qc.cx(1, 2)
+        qc.measure_all()
+        diagram = generate_circuit_diagram(qc, title="Test GHZ Circuit")
+        self.assertIsNotNone(diagram)
+        self.assertTrue(diagram.startswith('data:image/png;base64,'))
+        # Check that base64 content is non-trivial
+        self.assertGreater(len(diagram), 100)
+
+    def test_circuit_diagram_large_circuit_skipped(self):
+        """Large circuits (>20 qubits) should return None."""
+        from src.sector_quantum_circuit_benchmark import generate_circuit_diagram
+        from qiskit import QuantumCircuit
+        qc = QuantumCircuit(25)
+        qc.h(range(25))
+        diagram = generate_circuit_diagram(qc, max_qubits=20)
+        self.assertIsNone(diagram)
 
 
 # =============================================================================

@@ -1771,6 +1771,9 @@
             const [circuitLoading, setCircuitLoading] = useState(false);
             const [allCircuit, setAllCircuit] = useState(null);
             const [allCircuitLoading, setAllCircuitLoading] = useState(false);
+            const [circuitError, setCircuitError] = useState(null);
+            const [allCircuitError, setAllCircuitError] = useState(null);
+            const [circuitDiagrams, setCircuitDiagrams] = useState({});
 
             const sectors = [
                 { value: 'healthcare', label: 'Healthcare (HIPAA)', color: 'red' },
@@ -1809,20 +1812,45 @@
 
             const runCircuitBenchmark = async () => {
                 setCircuitLoading(true);
+                setCircuitError(null);
                 try {
-                    const data = await apiCall(`/benchmarks/sector/${sector}/circuit-benchmark`, { method: 'POST' });
+                    const data = await apiCall(`/benchmarks/sector/${sector}/circuit-benchmark`, { method: 'POST' }, 300000);
                     setCircuitResults(data);
-                } catch (e) { console.error(e); }
+                    // Fetch circuit diagrams in parallel
+                    fetchCircuitDiagrams();
+                } catch (e) {
+                    console.error(e);
+                    setCircuitError(e.message || 'Circuit benchmark failed. Check server logs.');
+                }
                 setCircuitLoading(false);
             };
 
             const runAllSectorCircuit = async () => {
                 setAllCircuitLoading(true);
+                setAllCircuitError(null);
                 try {
-                    const data = await apiCall(`/benchmarks/sector-all/circuit-benchmark`, { method: 'POST' });
+                    const data = await apiCall(`/benchmarks/sector-all/circuit-benchmark`, { method: 'POST' }, 600000);
                     setAllCircuit(data);
-                } catch (e) { console.error(e); }
+                } catch (e) {
+                    console.error(e);
+                    setAllCircuitError(e.message || 'All-sector circuit benchmark failed. Check server logs.');
+                }
                 setAllCircuitLoading(false);
+            };
+
+            const fetchCircuitDiagrams = async () => {
+                try {
+                    const [shor, grover, ecc] = await Promise.allSettled([
+                        apiCall('/quantum/circuit/shor-diagram?n=15', {}, 120000),
+                        apiCall('/quantum/circuit/grover-diagram?qubits=4', {}, 120000),
+                        apiCall('/quantum/circuit/ecc-diagram?field_bits=4', {}, 120000),
+                    ]);
+                    setCircuitDiagrams({
+                        shor: shor.status === 'fulfilled' ? shor.value : null,
+                        grover: grover.status === 'fulfilled' ? grover.value : null,
+                        ecc: ecc.status === 'fulfilled' ? ecc.value : null,
+                    });
+                } catch (e) { console.error('Diagram fetch error:', e); }
             };
 
             const urgencyColor = (score) => score >= 80 ? 'red' : score >= 60 ? 'orange' : score >= 40 ? 'yellow' : 'green';
@@ -1835,7 +1863,7 @@
                 <div className="space-y-6">
                     <div className="text-center"><h3 className="text-xl font-bold text-gray-800 mb-2">Sector-Specific Benchmarks</h3><p className="text-gray-600">Real PQC + FHE performance measurements for industry use cases</p></div>
                     <div className="flex flex-wrap gap-2 justify-center">
-                        {sectors.map(s => (<button key={s.value} onClick={() => { setSector(s.value); setResults(null); setQsResults(null); }} className={`px-4 py-2 rounded-lg font-medium transition ${sector === s.value ? 'bg-blue-600 text-white shadow' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>{s.label}</button>))}
+                        {sectors.map(s => (<button key={s.value} onClick={() => { setSector(s.value); setResults(null); setQsResults(null); setCircuitResults(null); setAllCircuit(null); setCircuitError(null); setAllCircuitError(null); }} className={`px-4 py-2 rounded-lg font-medium transition ${sector === s.value ? 'bg-blue-600 text-white shadow' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>{s.label}</button>))}
                     </div>
                     <div className="flex flex-wrap gap-3 justify-center">
                         <button onClick={runBenchmark} disabled={loading} className="bg-blue-600 text-white px-6 py-3 rounded-xl font-medium hover:bg-blue-700 disabled:opacity-50 transition">{loading ? (<span className="flex items-center gap-2"><svg className="animate-spin w-5 h-5" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>Running...</span>) : `Run Performance Benchmarks`}</button>
@@ -2048,6 +2076,20 @@
                         </div>
                     )}
 
+                    {/* Circuit Benchmark Error Display */}
+                    {circuitError && (
+                        <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg text-sm">
+                            <div className="flex items-center gap-2 font-bold mb-1"><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" /></svg> Circuit Benchmark Error</div>
+                            <p>{circuitError}</p>
+                        </div>
+                    )}
+                    {allCircuitError && (
+                        <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg text-sm">
+                            <div className="flex items-center gap-2 font-bold mb-1"><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" /></svg> All-Sector Circuit Error</div>
+                            <p>{allCircuitError}</p>
+                        </div>
+                    )}
+
                     {/* Real Quantum Circuit Benchmark Results */}
                     {circuitResults && (
                         <div className="space-y-4">
@@ -2056,7 +2098,7 @@
                                 <div className="flex gap-2 mb-4">
                                     <span className={`px-3 py-1 rounded text-xs font-medium ${circuitResults.gpu_backend?.gpu_available ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}`}>{circuitResults.gpu_backend?.gpu_available ? `GPU: ${circuitResults.gpu_backend?.gpu_device}` : 'CPU Mode'}</span>
                                     <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded text-xs font-medium">Circuits: {circuitResults.execution_summary?.circuits_executed}</span>
-                                    <span className="bg-purple-100 text-purple-700 px-3 py-1 rounded text-xs font-medium">{(circuitResults.execution_summary?.total_execution_time_ms / 1000).toFixed(1)}s</span>
+                                    <span className="bg-purple-100 text-purple-700 px-3 py-1 rounded text-xs font-medium">{((circuitResults.execution_summary?.total_execution_time_ms ?? 0) / 1000).toFixed(1)}s</span>
                                     {circuitResults.execution_summary?.sector_risk_assessment && riskBadge(circuitResults.execution_summary.sector_risk_assessment.overall_risk)}
                                 </div>
 
@@ -2065,7 +2107,7 @@
                                     <div className="bg-white rounded-lg p-4 mb-4">
                                         <h5 className="font-bold text-gray-700 mb-3">Shor's Algorithm — Real Circuit Execution</h5>
                                         <table className="w-full text-xs mb-3">
-                                            <thead><tr className="bg-gray-100"><th className="p-2 text-left">N</th><th className="p-2">Factors</th><th className="p-2">Success</th><th className="p-2">Qubits</th><th className="p-2">Depth</th><th className="p-2">Time (ms)</th></tr></thead>
+                                            <thead><tr className="bg-gray-100"><th className="p-2 text-left">N</th><th className="p-2">Factors</th><th className="p-2">Success</th><th className="p-2">Qubits</th><th className="p-2">Depth</th><th className="p-2">Pass Manager</th><th className="p-2">Device</th><th className="p-2">Time (ms)</th></tr></thead>
                                             <tbody>
                                                 {circuitResults.shor_circuits.demo_circuits?.map((c, i) => (
                                                     <tr key={i} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
@@ -2074,6 +2116,8 @@
                                                         <td className="p-2 text-center">{c.success ? <span className="text-green-600 font-bold">Yes</span> : <span className="text-red-600">No</span>}</td>
                                                         <td className="p-2 text-center font-mono">{c.num_qubits || '-'}</td>
                                                         <td className="p-2 text-center font-mono">{c.circuit_depth || '-'}</td>
+                                                        <td className="p-2 text-center font-mono">{c.optimization_info ? `${c.optimization_info.original_gates}→${c.optimization_info.optimized_gates} (L${c.optimization_info.optimization_level})` : '-'}</td>
+                                                        <td className="p-2 text-center">{c.optimization_info?.device === 'GPU' ? <span className="text-green-600 font-bold">🟢 GPU</span> : <span className="text-gray-500">CPU</span>}</td>
                                                         <td className="p-2 text-center font-mono">{typeof c.execution_time_ms === 'number' ? c.execution_time_ms.toFixed(1) : '-'}</td>
                                                     </tr>
                                                 ))}
@@ -2103,6 +2147,9 @@
                                                 <div className="bg-blue-50 p-2 rounded text-xs"><div className="font-bold">Qubits</div><div>{circuitResults.ecc_dlog_circuits.demo_result.total_qubits}</div></div>
                                                 <div className="bg-blue-50 p-2 rounded text-xs"><div className="font-bold">Depth</div><div>{circuitResults.ecc_dlog_circuits.demo_result.circuit_depth}</div></div>
                                                 <div className="bg-blue-50 p-2 rounded text-xs"><div className="font-bold">Time</div><div>{circuitResults.ecc_dlog_circuits.demo_result.execution_time_ms?.toFixed(1)}ms</div></div>
+                                                {circuitResults.ecc_dlog_circuits.demo_result.optimization_info && (
+                                                    <div className="bg-blue-50 p-2 rounded text-xs col-span-2"><div className="font-bold">Pass Manager (Level {circuitResults.ecc_dlog_circuits.demo_result.optimization_info.optimization_level}) — {circuitResults.ecc_dlog_circuits.demo_result.optimization_info.device === 'GPU' ? '🟢 GPU' : 'CPU'}</div><div>Gates: {circuitResults.ecc_dlog_circuits.demo_result.optimization_info.original_gates}→{circuitResults.ecc_dlog_circuits.demo_result.optimization_info.optimized_gates} | Depth: {circuitResults.ecc_dlog_circuits.demo_result.optimization_info.original_depth}→{circuitResults.ecc_dlog_circuits.demo_result.optimization_info.optimized_depth}</div></div>
+                                                )}
                                             </div>
                                         )}
                                         {circuitResults.ecc_dlog_circuits.demo_result?.extrapolation && (
@@ -2124,7 +2171,7 @@
                                     <div className="bg-white rounded-lg p-4 mb-4">
                                         <h5 className="font-bold text-gray-700 mb-3">Grover's Search — Real Circuit Execution</h5>
                                         <table className="w-full text-xs mb-3">
-                                            <thead><tr className="bg-gray-100"><th className="p-2">Qubits</th><th className="p-2">Space</th><th className="p-2">Success</th><th className="p-2">Target Prob</th><th className="p-2">Speedup</th><th className="p-2">Depth</th><th className="p-2">Time (ms)</th></tr></thead>
+                                            <thead><tr className="bg-gray-100"><th className="p-2">Qubits</th><th className="p-2">Space</th><th className="p-2">Success</th><th className="p-2">Target Prob</th><th className="p-2">Speedup</th><th className="p-2">Depth</th><th className="p-2">Pass Manager</th><th className="p-2">Device</th><th className="p-2">Time (ms)</th></tr></thead>
                                             <tbody>
                                                 {circuitResults.grover_circuits.demo_circuits?.map((c, i) => (
                                                     <tr key={i} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
@@ -2134,6 +2181,8 @@
                                                         <td className="p-2 text-center font-mono">{typeof c.target_probability === 'number' ? (c.target_probability > 1 ? c.target_probability.toFixed(1) + '%' : (c.target_probability * 100).toFixed(1) + '%') : '-'}</td>
                                                         <td className="p-2 text-center font-mono font-bold text-green-700">{c.speedup_factor}x</td>
                                                         <td className="p-2 text-center font-mono">{c.circuit_depth || '-'}</td>
+                                                        <td className="p-2 text-center font-mono">{c.optimization_info ? `${c.optimization_info.original_gates}→${c.optimization_info.optimized_gates} (L${c.optimization_info.optimization_level})` : '-'}</td>
+                                                        <td className="p-2 text-center">{c.optimization_info?.device === 'GPU' ? <span className="text-green-600 font-bold">🟢 GPU</span> : <span className="text-gray-500">CPU</span>}</td>
                                                         <td className="p-2 text-center font-mono">{typeof c.execution_time_ms === 'number' ? c.execution_time_ms.toFixed(1) : '-'}</td>
                                                     </tr>
                                                 ))}
@@ -2238,6 +2287,42 @@
                                         )}
                                     </div>
                                 )}
+                                {/* Circuit Diagrams */}
+                                {Object.keys(circuitDiagrams).length > 0 && (
+                                    <div className="bg-white rounded-lg p-4 mb-4">
+                                        <h5 className="font-bold text-gray-700 mb-3">Quantum Circuit Diagrams (Pass Manager Optimized)</h5>
+                                        <div className="space-y-4">
+                                            {circuitDiagrams.shor?.diagram && (
+                                                <div>
+                                                    <div className="flex items-center gap-2 mb-2">
+                                                        <span className="text-xs font-bold bg-purple-100 text-purple-700 px-2 py-1 rounded">Shor N=15</span>
+                                                        <span className="text-xs text-gray-500">Level 2 | {circuitDiagrams.shor.circuit_info?.num_qubits}q | Depth: {circuitDiagrams.shor.circuit_info?.original_depth}→{circuitDiagrams.shor.circuit_info?.optimized_depth}</span>
+                                                    </div>
+                                                    <img src={circuitDiagrams.shor.diagram} alt="Shor's Algorithm Circuit" className="w-full rounded border border-gray-200" />
+                                                </div>
+                                            )}
+                                            {circuitDiagrams.grover?.diagram && (
+                                                <div>
+                                                    <div className="flex items-center gap-2 mb-2">
+                                                        <span className="text-xs font-bold bg-green-100 text-green-700 px-2 py-1 rounded">Grover 4-qubit</span>
+                                                        <span className="text-xs text-gray-500">Level 3 | {circuitDiagrams.grover.circuit_info?.num_qubits}q | Depth: {circuitDiagrams.grover.circuit_info?.original_depth}→{circuitDiagrams.grover.circuit_info?.optimized_depth}</span>
+                                                    </div>
+                                                    <img src={circuitDiagrams.grover.diagram} alt="Grover's Algorithm Circuit" className="w-full rounded border border-gray-200" />
+                                                </div>
+                                            )}
+                                            {circuitDiagrams.ecc?.diagram && (
+                                                <div>
+                                                    <div className="flex items-center gap-2 mb-2">
+                                                        <span className="text-xs font-bold bg-blue-100 text-blue-700 px-2 py-1 rounded">ECC DLog GF(2^4)</span>
+                                                        <span className="text-xs text-gray-500">Level 2 | {circuitDiagrams.ecc.circuit_info?.num_qubits}q | Depth: {circuitDiagrams.ecc.circuit_info?.original_depth}→{circuitDiagrams.ecc.circuit_info?.optimized_depth}</span>
+                                                    </div>
+                                                    <img src={circuitDiagrams.ecc.diagram} alt="ECC Discrete Log Circuit" className="w-full rounded border border-gray-200" />
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
+
                             </div>
                         </div>
                     )}
@@ -2248,7 +2333,7 @@
                             <h4 className="text-lg font-bold text-cyan-900 mb-4">All-Sector Real Circuit Benchmark Comparison</h4>
                             <div className="flex gap-2 mb-4">
                                 <span className="bg-cyan-100 text-cyan-700 px-3 py-1 rounded text-xs font-medium">Total Circuits: {allCircuit.cross_sector_comparison?.total_circuits_executed}</span>
-                                <span className="bg-purple-100 text-purple-700 px-3 py-1 rounded text-xs font-medium">{(allCircuit.total_execution_time_ms / 1000).toFixed(1)}s</span>
+                                <span className="bg-purple-100 text-purple-700 px-3 py-1 rounded text-xs font-medium">{((allCircuit.total_execution_time_ms ?? 0) / 1000).toFixed(1)}s</span>
                             </div>
                             {allCircuit.cross_sector_comparison?.risk_ranking && (
                                 <div className="bg-white rounded-lg p-4 mb-4">
@@ -2273,7 +2358,7 @@
                                             <div className="flex justify-between"><span>Circuits:</span><span>{data.execution_summary?.circuits_executed}</span></div>
                                             <div className="flex justify-between"><span>HNDL:</span>{riskBadge(data.hndl_simulation?.hndl_risk)}</div>
                                             <div className="flex justify-between"><span>Shor Demo:</span><span>{data.shor_circuits?.demo_circuits?.filter(c => c.success).length}/{data.shor_circuits?.demo_circuits?.length}</span></div>
-                                            <div className="flex justify-between"><span>Time:</span><span>{(data.execution_summary?.total_execution_time_ms / 1000).toFixed(1)}s</span></div>
+                                            <div className="flex justify-between"><span>Time:</span><span>{((data.execution_summary?.total_execution_time_ms ?? 0) / 1000).toFixed(1)}s</span></div>
                                         </div>
                                     </div>
                                 ))}

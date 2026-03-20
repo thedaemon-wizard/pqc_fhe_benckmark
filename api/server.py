@@ -3942,6 +3942,185 @@ async def quantum_gpu_status():
 
 
 # =============================================================================
+# CIRCUIT DIAGRAM ENDPOINTS
+# =============================================================================
+
+@app.get("/quantum/circuit/shor-diagram", tags=["Quantum Circuit Diagrams"])
+async def quantum_shor_circuit_diagram(n: int = 15):
+    """
+    Generate Shor's algorithm circuit diagram for factoring N.
+
+    Returns base64-encoded PNG circuit diagram with circuit metadata.
+    Supported N: 15, 21, 35
+    """
+    if n not in [15, 21, 35]:
+        raise HTTPException(status_code=400, detail="N must be 15, 21, or 35")
+    try:
+        from src.quantum_verification import ShorCircuitVerifier
+        from src.sector_quantum_circuit_benchmark import generate_circuit_diagram
+        from qiskit import QuantumCircuit, QuantumRegister, ClassicalRegister
+        from qiskit.transpiler import generate_preset_pass_manager
+        import math
+
+        verifier = ShorCircuitVerifier(shots=1)
+        info = verifier.SUPPORTED_FACTORIZATIONS[n]
+        n_bits = info['n_bits']
+        n_count = 2 * n_bits
+        base_a = info['bases'][0]
+
+        qc, n_count_actual = verifier._build_shor_circuit(n, base_a, n_count, n_bits)
+
+        # Generate diagram for original circuit
+        diagram = generate_circuit_diagram(
+            qc, title=f"Shor's Algorithm: N={n}, a={base_a}"
+        )
+
+        # Also show transpiled version info
+        pm = generate_preset_pass_manager(
+            optimization_level=2, basis_gates=['cx', 'id', 'rz', 'sx', 'x']
+        )
+        transpiled = pm.run(qc)
+
+        return {
+            "diagram": diagram,
+            "circuit_info": {
+                "algorithm": "shor",
+                "N": n,
+                "base_a": base_a,
+                "num_qubits": qc.num_qubits,
+                "original_depth": qc.depth(),
+                "original_gates": sum(int(v) for v in qc.count_ops().values()),
+                "optimized_depth": transpiled.depth(),
+                "optimized_gates": sum(int(v) for v in transpiled.count_ops().values()),
+                "optimization_level": 2,
+            }
+        }
+    except Exception as e:
+        logger.error("Shor diagram generation failed: %s", e)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/quantum/circuit/grover-diagram", tags=["Quantum Circuit Diagrams"])
+async def quantum_grover_circuit_diagram(qubits: int = 4):
+    """
+    Generate Grover's algorithm circuit diagram.
+
+    Returns base64-encoded PNG circuit diagram with circuit metadata.
+    Supported qubits: 3-10
+    """
+    qubits = max(3, min(qubits, 10))
+    try:
+        from src.quantum_verification import GroverCircuitVerifier
+        from src.sector_quantum_circuit_benchmark import generate_circuit_diagram
+        from qiskit.transpiler import generate_preset_pass_manager
+        import math
+
+        verifier = GroverCircuitVerifier(shots=1)
+        target = 0
+        N = 2 ** qubits
+        optimal_iters = max(1, int(math.pi / 4 * math.sqrt(N)))
+
+        qc = verifier._build_grover_circuit(qubits, target, optimal_iters)
+
+        diagram = generate_circuit_diagram(
+            qc, title=f"Grover's Algorithm: {qubits} qubits, target=0"
+        )
+
+        pm = generate_preset_pass_manager(
+            optimization_level=3, basis_gates=['cx', 'id', 'rz', 'sx', 'x']
+        )
+        transpiled = pm.run(qc)
+
+        return {
+            "diagram": diagram,
+            "circuit_info": {
+                "algorithm": "grover",
+                "num_qubits": qubits,
+                "search_space": N,
+                "optimal_iterations": optimal_iters,
+                "original_depth": qc.depth(),
+                "original_gates": sum(int(v) for v in qc.count_ops().values()),
+                "optimized_depth": transpiled.depth(),
+                "optimized_gates": sum(int(v) for v in transpiled.count_ops().values()),
+                "optimization_level": 3,
+            }
+        }
+    except Exception as e:
+        logger.error("Grover diagram generation failed: %s", e)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/quantum/circuit/ecc-diagram", tags=["Quantum Circuit Diagrams"])
+async def quantum_ecc_circuit_diagram(field_bits: int = 4):
+    """
+    Generate ECC Discrete Log circuit diagram on GF(2^m).
+
+    Returns base64-encoded PNG circuit diagram with circuit metadata.
+    Supported field_bits: 3-6
+    """
+    field_bits = max(3, min(field_bits, 6))
+    try:
+        from src.sector_quantum_circuit_benchmark import (
+            ECCDiscreteLogCircuit,
+            generate_circuit_diagram,
+        )
+        from qiskit import QuantumCircuit
+        from qiskit.transpiler import generate_preset_pass_manager
+        import math
+
+        n_elements = 2 ** field_bits - 1
+        n_count = 2 * field_bits
+        n_work = field_bits
+        total_qubits = n_count + n_work
+
+        # Build the ECC circuit directly
+        qc = QuantumCircuit(total_qubits, n_count)
+        for i in range(n_count):
+            qc.h(i)
+        qc.x(n_count)
+        for i in range(n_count):
+            power = 2 ** i % n_elements
+            for j in range(n_work):
+                if (power >> j) & 1:
+                    qc.cx(i, n_count + j)
+        for i in range(n_count // 2):
+            qc.swap(i, n_count - 1 - i)
+        for i in range(n_count):
+            for j in range(i):
+                qc.cp(-math.pi / (2 ** (i - j)), j, i)
+            qc.h(i)
+        qc.measure(range(n_count), range(n_count))
+
+        diagram = generate_circuit_diagram(
+            qc, title=f"ECC Discrete Log: GF(2^{field_bits})"
+        )
+
+        pm = generate_preset_pass_manager(
+            optimization_level=2, basis_gates=['cx', 'id', 'rz', 'sx', 'x']
+        )
+        transpiled = pm.run(qc)
+
+        return {
+            "diagram": diagram,
+            "circuit_info": {
+                "algorithm": "ecc_discrete_log",
+                "field": f"GF(2^{field_bits})",
+                "num_qubits": total_qubits,
+                "counting_qubits": n_count,
+                "work_qubits": n_work,
+                "original_depth": qc.depth(),
+                "original_gates": sum(int(v) for v in qc.count_ops().values()),
+                "optimized_depth": transpiled.depth(),
+                "optimized_gates": sum(int(v) for v in transpiled.count_ops().values()),
+                "optimization_level": 2,
+            }
+        }
+    except Exception as e:
+        logger.error("ECC diagram generation failed: %s", e)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# =============================================================================
 # MAIN ENTRY POINT
 # =============================================================================
 
@@ -3973,6 +4152,9 @@ def main():
     print("Sector Benchmarks: http://127.0.0.1:8000/benchmarks/sector/healthcare")
     print("Circuit Benchmarks: http://127.0.0.1:8000/benchmarks/sector/healthcare/circuit-benchmark")
     print("GPU Status: http://127.0.0.1:8000/quantum/circuit/gpu-status")
+    print("Shor Diagram: http://127.0.0.1:8000/quantum/circuit/shor-diagram?n=15")
+    print("Grover Diagram: http://127.0.0.1:8000/quantum/circuit/grover-diagram?qubits=4")
+    print("ECC Diagram: http://127.0.0.1:8000/quantum/circuit/ecc-diagram?field_bits=4")
     print("\n" + "=" * 60 + "\n")
 
     uvicorn.run(

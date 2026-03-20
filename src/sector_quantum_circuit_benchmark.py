@@ -52,8 +52,9 @@ logger = logging.getLogger(__name__)
 # =============================================================================
 
 try:
-    from qiskit import QuantumCircuit, QuantumRegister, ClassicalRegister, transpile
+    from qiskit import QuantumCircuit, QuantumRegister, ClassicalRegister
     from qiskit_aer import AerSimulator
+    from qiskit.transpiler import generate_preset_pass_manager
     QISKIT_AVAILABLE = True
 except ImportError:
     QISKIT_AVAILABLE = False
@@ -125,6 +126,62 @@ except ImportError:
 
 
 # =============================================================================
+# CIRCUIT DIAGRAM GENERATION
+# =============================================================================
+
+def generate_circuit_diagram(
+    circuit: 'QuantumCircuit',
+    title: str = "",
+    max_qubits: int = 20,
+) -> Optional[str]:
+    """
+    Generate circuit diagram as base64-encoded PNG for web display.
+
+    Uses Qiskit's matplotlib circuit drawer to render circuit diagrams.
+    Requires: matplotlib, pylatexenc.
+
+    Args:
+        circuit: Qiskit QuantumCircuit to draw
+        title: Optional title for the diagram
+        max_qubits: Maximum qubits to render (skip for very large circuits)
+
+    Returns:
+        Base64 data URI string (data:image/png;base64,...) or None on failure
+    """
+    if circuit.num_qubits > max_qubits:
+        logger.warning(
+            "Circuit has %d qubits (max %d for diagram). Skipping diagram.",
+            circuit.num_qubits, max_qubits,
+        )
+        return None
+
+    try:
+        import io
+        import base64
+        import matplotlib
+        matplotlib.use('Agg')  # Non-interactive backend
+        import matplotlib.pyplot as plt
+
+        fig = circuit.draw(output='mpl', fold=20, idle_wires=False)
+        if title:
+            fig.suptitle(title, fontsize=10, y=1.02)
+
+        buf = io.BytesIO()
+        fig.savefig(buf, format='png', dpi=100, bbox_inches='tight')
+        buf.seek(0)
+        img_base64 = base64.b64encode(buf.read()).decode('utf-8')
+        plt.close(fig)
+
+        return f"data:image/png;base64,{img_base64}"
+    except ImportError as e:
+        logger.warning("Cannot generate circuit diagram (missing dep): %s", e)
+        return None
+    except Exception as e:
+        logger.warning("Circuit diagram generation failed: %s", e)
+        return None
+
+
+# =============================================================================
 # GPU QUANTUM BACKEND
 # =============================================================================
 
@@ -162,7 +219,8 @@ class GPUQuantumBackend:
             qc.h(0)
             qc.cx(0, 1)
             qc.measure_all()
-            result = test_backend.run(transpile(qc, test_backend), shots=10).result()
+            pm = generate_preset_pass_manager(optimization_level=1, basis_gates=['cx', 'id', 'rz', 'sx', 'x'])
+            result = test_backend.run(pm.run(qc), shots=10).result()
             if result.success:
                 logger.info("GPU quantum backend detected and operational")
                 return True
@@ -318,11 +376,23 @@ class EnhancedNoiseSimulator:
         'mpc-fhe': 'lattice_correlated',
     }
 
-    def __init__(self, shots: int = 4096):
+    def __init__(self, shots: int = 4096, device: str = 'GPU'):
         if not QISKIT_AVAILABLE:
             raise ImportError("Qiskit not available")
         self.shots = shots
-        self.backend = AerSimulator()
+        # Try GPU-accelerated backend first, fall back to CPU
+        self.device_used = 'CPU'
+        try:
+            self.backend = AerSimulator(device=device)
+            self.device_used = device
+            logger.info(f"EnhancedNoiseSimulator using {device} backend")
+        except Exception:
+            self.backend = AerSimulator()
+            logger.info("EnhancedNoiseSimulator falling back to CPU backend")
+        self._pass_manager = generate_preset_pass_manager(
+            optimization_level=2,
+            basis_gates=['cx', 'id', 'rz', 'sx', 'x']
+        )
 
     def run_sector_noise_profile(
         self,
@@ -354,27 +424,34 @@ class EnhancedNoiseSimulator:
 
         start_time = time.time()
 
-        # 1) Ideal execution
+        # 1) Ideal execution — use pass manager
+        transpiled_qc = self._pass_manager.run(qc)
         ideal_result = self.backend.run(
-            transpile(qc, self.backend), shots=self.shots
+            transpiled_qc, shots=self.shots
         ).result()
         ideal_counts = ideal_result.get_counts()
         ideal_prob = ideal_counts.get(target_state, 0) / self.shots
 
         # 2) Noisy execution with sector profile
         noise_model = self._build_sector_noise_model(profile)
-        noisy_backend = AerSimulator(noise_model=noise_model)
+        try:
+            noisy_backend = AerSimulator(noise_model=noise_model, device=self.device_used)
+        except Exception:
+            noisy_backend = AerSimulator(noise_model=noise_model)
         noisy_result = noisy_backend.run(
-            transpile(qc, noisy_backend), shots=self.shots
+            transpiled_qc, shots=self.shots
         ).result()
         noisy_counts = noisy_result.get_counts()
         noisy_prob = noisy_counts.get(target_state, 0) / self.shots
 
         # 3) Also run with simple depolarizing for comparison
         simple_noise = self._build_depolarizing_only(profile['single_qubit_error'])
-        simple_backend = AerSimulator(noise_model=simple_noise)
+        try:
+            simple_backend = AerSimulator(noise_model=simple_noise, device=self.device_used)
+        except Exception:
+            simple_backend = AerSimulator(noise_model=simple_noise)
         simple_result = simple_backend.run(
-            transpile(qc, simple_backend), shots=self.shots
+            transpiled_qc, shots=self.shots
         ).result()
         simple_counts = simple_result.get_counts()
         simple_prob = simple_counts.get(target_state, 0) / self.shots
@@ -403,6 +480,7 @@ class EnhancedNoiseSimulator:
                 'T1_us': profile['thermal_relaxation_t1_us'],
                 'T2_us': profile['thermal_relaxation_t2_us'],
             },
+            'device': self.device_used,
             'execution_time_ms': round(exec_time, 1),
             'assessment': self._assess_noise_impact(
                 sector, noise_profile_name, ideal_prob, noisy_prob, fidelity
@@ -593,11 +671,23 @@ class ECCDiscreteLogCircuit:
         },
     }
 
-    def __init__(self, shots: int = 4096):
+    def __init__(self, shots: int = 4096, device: str = 'GPU'):
         if not QISKIT_AVAILABLE:
             raise ImportError("Qiskit not available")
         self.shots = shots
-        self.backend = AerSimulator()
+        # Try GPU-accelerated backend first, fall back to CPU
+        self.device_used = 'CPU'
+        try:
+            self.backend = AerSimulator(device=device)
+            self.device_used = device
+            logger.info(f"ECCDiscreteLogCircuit using {device} backend")
+        except Exception:
+            self.backend = AerSimulator()
+            logger.info("ECCDiscreteLogCircuit falling back to CPU backend")
+        self._pass_manager = generate_preset_pass_manager(
+            optimization_level=2,
+            basis_gates=['cx', 'id', 'rz', 'sx', 'x']
+        )
 
     def run_demo(self, field_bits: int = 4) -> Dict[str, Any]:
         """
@@ -657,8 +747,10 @@ class ECCDiscreteLogCircuit:
         # Measure counting register
         qc.measure(range(n_count), range(n_count))
 
-        # Transpile and run
-        transpiled = transpile(qc, self.backend)
+        # Transpile using Pass Manager and run
+        original_depth = qc.depth()
+        original_gate_count = sum(int(v) for v in qc.count_ops().values())
+        transpiled = self._pass_manager.run(qc)
         result = self.backend.run(transpiled, shots=self.shots).result()
         counts = result.get_counts()
 
@@ -681,6 +773,10 @@ class ECCDiscreteLogCircuit:
 
         success = period_found is not None and n_elements % period_found == 0
 
+        optimized_depth = transpiled.depth()
+        optimized_ops = transpiled.count_ops()
+        optimized_gate_total = sum(int(v) for v in optimized_ops.values())
+
         return {
             'field': f'GF(2^{field_bits})',
             'field_order': 2 ** field_bits,
@@ -688,8 +784,8 @@ class ECCDiscreteLogCircuit:
             'total_qubits': total_qubits,
             'counting_qubits': n_count,
             'work_qubits': n_work,
-            'circuit_depth': qc.depth(),
-            'gate_count': dict(qc.count_ops()),
+            'circuit_depth': optimized_depth,
+            'gate_count': {str(k): int(v) for k, v in optimized_ops.items()},
             'shots': self.shots,
             'period_found': period_found,
             'success': success,
@@ -703,6 +799,18 @@ class ECCDiscreteLogCircuit:
                 'roetteler_2017': 'Quantum resource estimates for ECC discrete log',
                 'arxiv_2503_02984': 'Exact binary field gate counts (March 2025)',
                 'qubit_formula': '9n + 2*ceil(log2(n)) + 10 for n-bit curve',
+            },
+            'optimization_info': {
+                'original_gates': original_gate_count,
+                'optimized_gates': optimized_gate_total,
+                'reduction_percent': round(
+                    (1 - optimized_gate_total / max(original_gate_count, 1)) * 100, 1
+                ),
+                'original_depth': original_depth,
+                'optimized_depth': optimized_depth,
+                'optimization_level': 2,
+                'method': 'generate_preset_pass_manager',
+                'device': self.device_used,
             },
         }
 
@@ -1003,6 +1111,7 @@ class SectorCircuitBenchmarkRunner:
                     'execution_time_ms': result.execution_time_ms,
                     'shots': result.shots,
                     'period_found': result.period_found,
+                    'optimization_info': result.optimization_info,
                 })
             except Exception as e:
                 circuit_results.append({
@@ -1092,6 +1201,7 @@ class SectorCircuitBenchmarkRunner:
                     'optimal_iterations': result.optimal_iterations,
                     'actual_iterations': result.actual_iterations,
                     'execution_time_ms': result.execution_time_ms,
+                    'optimization_info': result.optimization_info,
                 })
             except Exception as e:
                 circuit_results.append({
