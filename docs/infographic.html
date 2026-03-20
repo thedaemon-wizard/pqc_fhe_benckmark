@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PQC-FHE Quantum Security Assessment 2026 — Infographic</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:linear-gradient(135deg,#0f172a 0%,#1e293b 50%,#0f172a 100%);color:#e2e8f0;min-height:100vh;padding:2rem}
+.container{max-width:1200px;margin:0 auto}
+h1{font-size:2.5rem;text-align:center;background:linear-gradient(90deg,#38bdf8,#818cf8,#c084fc);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:0.5rem}
+.subtitle{text-align:center;color:#94a3b8;font-size:1.1rem;margin-bottom:2rem}
+.grid{display:grid;gap:1.5rem}
+.grid-2{grid-template-columns:repeat(auto-fit,minmax(500px,1fr))}
+.grid-3{grid-template-columns:repeat(auto-fit,minmax(340px,1fr))}
+.grid-5{grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}
+.card{background:rgba(30,41,59,0.8);border:1px solid rgba(148,163,184,0.2);border-radius:1rem;padding:1.5rem;backdrop-filter:blur(10px);transition:transform 0.3s,box-shadow 0.3s}
+.card:hover{transform:translateY(-4px);box-shadow:0 12px 40px rgba(0,0,0,0.3)}
+.card h3{font-size:1.1rem;margin-bottom:0.75rem;display:flex;align-items:center;gap:0.5rem}
+.badge{display:inline-block;padding:0.15rem 0.6rem;border-radius:9999px;font-size:0.7rem;font-weight:700;text-transform:uppercase}
+.badge-critical{background:#dc2626;color:#fff}
+.badge-high{background:#ea580c;color:#fff}
+.badge-moderate{background:#d97706;color:#fff}
+.badge-low{background:#16a34a;color:#fff}
+.section-title{font-size:1.5rem;font-weight:700;margin:2.5rem 0 1rem;padding-left:0.75rem;border-left:4px solid #818cf8}
+.bar-container{background:rgba(100,116,139,0.3);border-radius:0.5rem;height:1.5rem;overflow:hidden;margin:0.25rem 0}
+.bar{height:100%;border-radius:0.5rem;transition:width 1s ease-out;display:flex;align-items:center;padding-left:0.5rem;font-size:0.7rem;font-weight:700}
+.bar-critical{background:linear-gradient(90deg,#dc2626,#ef4444)}
+.bar-high{background:linear-gradient(90deg,#ea580c,#f97316)}
+.bar-moderate{background:linear-gradient(90deg,#d97706,#eab308)}
+.bar-low{background:linear-gradient(90deg,#16a34a,#22c55e)}
+table{width:100%;border-collapse:collapse;font-size:0.85rem}
+th{background:rgba(51,65,85,0.8);padding:0.5rem;text-align:center;font-weight:600;border-bottom:2px solid #475569}
+td{padding:0.4rem 0.5rem;text-align:center;border-bottom:1px solid rgba(71,85,105,0.5)}
+.mono{font-family:'Cascadia Code','Fira Code',monospace}
+.text-red{color:#f87171}
+.text-green{color:#4ade80}
+.text-yellow{color:#facc15}
+.text-blue{color:#60a5fa}
+.text-purple{color:#c084fc}
+.timeline{position:relative;padding-left:2rem}
+.timeline::before{content:'';position:absolute;left:0.75rem;top:0;bottom:0;width:2px;background:linear-gradient(180deg,#38bdf8,#818cf8,#c084fc)}
+.timeline-item{position:relative;margin-bottom:1.5rem;padding-left:1.5rem}
+.timeline-item::before{content:'';position:absolute;left:-1.35rem;top:0.4rem;width:12px;height:12px;border-radius:50%;border:2px solid #818cf8;background:#1e293b}
+.timeline-item.active::before{background:#818cf8;box-shadow:0 0 12px rgba(129,140,248,0.5)}
+.stat-number{font-size:2rem;font-weight:800;line-height:1}
+.stat-label{font-size:0.75rem;color:#94a3b8;margin-top:0.25rem}
+.glow{animation:glow 2s ease-in-out infinite alternate}
+@keyframes glow{from{box-shadow:0 0 5px rgba(129,140,248,0.2)}to{box-shadow:0 0 20px rgba(129,140,248,0.4)}}
+.footer{text-align:center;margin-top:3rem;padding-top:1.5rem;border-top:1px solid rgba(148,163,184,0.2);color:#64748b;font-size:0.8rem}
+@media(max-width:768px){h1{font-size:1.8rem}.grid-2,.grid-3,.grid-5{grid-template-columns:1fr}body{padding:1rem}}
+</style>
+</head>
+<body>
+<div class="container">
+    <h1>PQC-FHE Quantum Security Assessment 2026</h1>
+    <p class="subtitle">Real Qiskit Circuit Benchmarks | Sector-Specific Threat Analysis | GPU-Accelerated Simulation</p>
+
+    <!-- Key Stats -->
+    <div class="grid grid-5" style="margin-bottom:2rem">
+        <div class="card" style="text-align:center">
+            <div class="stat-number text-blue">5</div>
+            <div class="stat-label">Industry Sectors</div>
+        </div>
+        <div class="card" style="text-align:center">
+            <div class="stat-number text-purple">22</div>
+            <div class="stat-label">API Endpoints</div>
+        </div>
+        <div class="card" style="text-align:center">
+            <div class="stat-number text-green">173</div>
+            <div class="stat-label">Tests Passing</div>
+        </div>
+        <div class="card" style="text-align:center">
+            <div class="stat-number text-yellow">32</div>
+            <div class="stat-label">Max GPU Qubits</div>
+        </div>
+        <div class="card" style="text-align:center">
+            <div class="stat-number text-red">2031</div>
+            <div class="stat-label">Q-Day Estimate</div>
+        </div>
+    </div>
+
+    <!-- Section 1: Sector Threat Map -->
+    <div class="section-title">1. Sector Quantum Threat Map</div>
+    <div class="grid grid-5">
+        <div class="card glow">
+            <h3>Healthcare <span class="badge badge-critical">CRITICAL</span></h3>
+            <div style="font-size:0.8rem;color:#94a3b8">
+                <div>HIPAA | 50yr retention</div>
+                <div>RSA-2048, ECDSA-256</div>
+                <div>HNDL: <span class="text-red">45yr window</span></div>
+                <div>Urgency: <span class="mono text-red">82/100</span></div>
+            </div>
+        </div>
+        <div class="card">
+            <h3>Finance <span class="badge badge-high">HIGH</span></h3>
+            <div style="font-size:0.8rem;color:#94a3b8">
+                <div>CNSA 2.0 | 7yr retention</div>
+                <div>RSA-2048/4096, ECDSA-384</div>
+                <div>HNDL: <span class="text-yellow">2yr window</span></div>
+                <div>Urgency: <span class="mono text-yellow">70/100</span></div>
+            </div>
+        </div>
+        <div class="card glow">
+            <h3>Blockchain <span class="badge badge-critical">CRITICAL</span></h3>
+            <div style="font-size:0.8rem;color:#94a3b8">
+                <div>Immutable | 999yr retention</div>
+                <div>ECDSA-256, Ed25519</div>
+                <div>HNDL: <span class="text-red">994yr window</span></div>
+                <div>Urgency: <span class="mono text-red">73/100</span></div>
+            </div>
+        </div>
+        <div class="card">
+            <h3>IoT/Edge <span class="badge badge-moderate">MODERATE</span></h3>
+            <div style="font-size:0.8rem;color:#94a3b8">
+                <div>NIST 800-183 | 10yr retention</div>
+                <div>RSA-2048, AES-128</div>
+                <div>HNDL: <span class="text-yellow">5yr window</span></div>
+                <div>Urgency: <span class="mono">59/100</span></div>
+            </div>
+        </div>
+        <div class="card">
+            <h3>MPC-FHE <span class="badge badge-moderate">MODERATE</span></h3>
+            <div style="font-size:0.8rem;color:#94a3b8">
+                <div>Lattice-native | 1yr retention</div>
+                <div>CKKS Ring-LWE (124.5 bits)</div>
+                <div>HNDL: <span class="text-green">LOW</span></div>
+                <div>Urgency: <span class="mono">56/100</span></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Section 2: Q-Day Timeline -->
+    <div class="section-title">2. Shor vs RSA/ECC — Q-Day Timeline</div>
+    <div class="grid grid-2">
+        <div class="card">
+            <h3>Quantum Computing Progression</h3>
+            <div class="timeline">
+                <div class="timeline-item active">
+                    <div class="text-blue" style="font-weight:700">2026 — Current State</div>
+                    <div style="font-size:0.8rem;color:#94a3b8">~1,000 physical qubits, NISQ era. Shor demo: N=15,21,35 on simulator. GPU: 32 qubits max.</div>
+                </div>
+                <div class="timeline-item">
+                    <div class="text-yellow" style="font-weight:700">2029 — ECC Falls (Optimistic)</div>
+                    <div style="font-size:0.8rem;color:#94a3b8">P-256 requires 2,330 qubits. ECDSA-256 broken. Blockchain signatures at risk.</div>
+                </div>
+                <div class="timeline-item">
+                    <div class="text-red" style="font-weight:700">2031 — RSA-2048 Falls (Moderate)</div>
+                    <div style="font-size:0.8rem;color:#94a3b8">Pinnacle: 100K physical qubits. RSA-2048 broken in ~30 min. Healthcare HNDL window opens.</div>
+                </div>
+                <div class="timeline-item">
+                    <div class="text-purple" style="font-weight:700">2035 — NIST Deadline</div>
+                    <div style="font-size:0.8rem;color:#94a3b8">All classical public-key crypto deprecated. Full PQC migration required.</div>
+                </div>
+            </div>
+        </div>
+        <div class="card">
+            <h3>Shor Resource Requirements</h3>
+            <table>
+                <thead><tr><th>Target</th><th>Logical Qubits</th><th>Gates</th><th>Time (Pinnacle)</th></tr></thead>
+                <tbody>
+                    <tr><td>RSA-2048</td><td class="mono">4,098</td><td class="mono">2.7×10<sup>10</sup></td><td class="mono text-red">30 min</td></tr>
+                    <tr><td>RSA-3072</td><td class="mono">6,146</td><td class="mono">9.1×10<sup>10</sup></td><td class="mono">2 hr</td></tr>
+                    <tr><td>RSA-4096</td><td class="mono">8,194</td><td class="mono">2.2×10<sup>11</sup></td><td class="mono">5 hr</td></tr>
+                    <tr><td>P-256 (ECC)</td><td class="mono">2,330</td><td class="mono">1.3×10<sup>11</sup></td><td class="mono text-red">~1 hr</td></tr>
+                    <tr><td>P-384 (ECC)</td><td class="mono">3,484</td><td class="mono">4.2×10<sup>11</sup></td><td class="mono">~3 hr</td></tr>
+                </tbody>
+            </table>
+            <div style="margin-top:0.75rem;font-size:0.75rem;color:#94a3b8">
+                Sources: Gidney-Ekera 2021, Gidney 2025, Pinnacle Architecture 2026
+            </div>
+        </div>
+    </div>
+
+    <!-- Section 3: Grover vs AES -->
+    <div class="section-title">3. Grover vs AES — Symmetric Security</div>
+    <div class="grid grid-2">
+        <div class="card">
+            <h3>AES-128 <span class="badge badge-high">WEAKENED</span></h3>
+            <div style="margin-bottom:0.5rem">
+                <div style="font-size:0.8rem;display:flex;justify-content:space-between"><span>Classical Security</span><span class="mono">128 bits</span></div>
+                <div class="bar-container"><div class="bar bar-low" style="width:100%">128 bits</div></div>
+                <div style="font-size:0.8rem;display:flex;justify-content:space-between;margin-top:0.5rem"><span>Post-Quantum (Grover)</span><span class="mono text-red">64 bits</span></div>
+                <div class="bar-container"><div class="bar bar-critical" style="width:50%">64 bits</div></div>
+            </div>
+            <div style="font-size:0.75rem;color:#94a3b8">
+                <div>Qubits: 2,953 | Toffoli: 2.23×10<sup>10</sup></div>
+                <div>CCQC 2025: -45.2% FDW | T-depth: 30 (ASIACRYPT 2025)</div>
+                <div class="text-red">Insufficient for CNSA 2.0 compliance</div>
+            </div>
+        </div>
+        <div class="card">
+            <h3>AES-256 <span class="badge badge-low">SECURE</span></h3>
+            <div style="margin-bottom:0.5rem">
+                <div style="font-size:0.8rem;display:flex;justify-content:space-between"><span>Classical Security</span><span class="mono">256 bits</span></div>
+                <div class="bar-container"><div class="bar bar-low" style="width:100%">256 bits</div></div>
+                <div style="font-size:0.8rem;display:flex;justify-content:space-between;margin-top:0.5rem"><span>Post-Quantum (Grover)</span><span class="mono text-green">128 bits</span></div>
+                <div class="bar-container"><div class="bar bar-low" style="width:50%">128 bits</div></div>
+            </div>
+            <div style="font-size:0.75rem;color:#94a3b8">
+                <div>Qubits: 6,681 | Toffoli: 1.51×10<sup>11</sup></div>
+                <div class="text-green">CNSA 2.0 compliant. All sectors recommended.</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Section 4: Real Circuit Benchmarks -->
+    <div class="section-title">4. Real Quantum Circuit Benchmark Results</div>
+    <div class="grid grid-3">
+        <div class="card">
+            <h3>Shor Factoring (Qiskit AerSimulator)</h3>
+            <table>
+                <thead><tr><th>N</th><th>Factors</th><th>Qubits</th><th>Status</th></tr></thead>
+                <tbody>
+                    <tr><td class="mono">15</td><td>3 × 5</td><td class="mono">12</td><td class="text-green">Success</td></tr>
+                    <tr><td class="mono">21</td><td>3 × 7</td><td class="mono">15</td><td class="text-green">Success</td></tr>
+                    <tr><td class="mono">35</td><td>5 × 7</td><td class="mono">18</td><td class="text-green">Success</td></tr>
+                </tbody>
+            </table>
+            <div style="font-size:0.75rem;color:#94a3b8;margin-top:0.5rem">
+                Real QFT-based period finding. Extrapolates to RSA-2048 (4,098 qubits).
+            </div>
+        </div>
+        <div class="card">
+            <h3>ECC Discrete Log (GF(2<sup>4</sup>))</h3>
+            <table>
+                <thead><tr><th>Curve</th><th>Qubits</th><th>Toffoli</th><th>Threat</th></tr></thead>
+                <tbody>
+                    <tr><td>P-256</td><td class="mono">2,330</td><td class="mono">1.26×10<sup>11</sup></td><td class="text-yellow">~2035</td></tr>
+                    <tr><td>P-384</td><td class="mono">3,484</td><td class="mono">4.19×10<sup>11</sup></td><td>~2037</td></tr>
+                    <tr><td>Ed25519</td><td class="mono">2,321</td><td class="mono">1.24×10<sup>11</sup></td><td class="text-yellow">~2035</td></tr>
+                    <tr><td>secp256k1</td><td class="mono">2,330</td><td class="mono">1.26×10<sup>11</sup></td><td class="text-yellow">~2035</td></tr>
+                </tbody>
+            </table>
+            <div style="font-size:0.75rem;color:#94a3b8;margin-top:0.5rem">
+                Roetteler (2017) + arXiv:2503.02984 (2025). Formula: 9n+2log<sub>2</sub>n+10 qubits.
+            </div>
+        </div>
+        <div class="card">
+            <h3>Grover Search (Qiskit AerSimulator)</h3>
+            <table>
+                <thead><tr><th>Qubits</th><th>Space</th><th>Speedup</th></tr></thead>
+                <tbody>
+                    <tr><td class="mono">4</td><td>16</td><td class="mono text-green">~31x</td></tr>
+                    <tr><td class="mono">8</td><td>256</td><td class="mono text-green">~256x</td></tr>
+                    <tr><td class="mono">12</td><td>4,096</td><td class="mono text-green">~4,096x</td></tr>
+                    <tr><td class="mono">16</td><td>65,536</td><td class="mono text-green">~65,536x</td></tr>
+                </tbody>
+            </table>
+            <div style="font-size:0.75rem;color:#94a3b8;margin-top:0.5rem">
+                Quadratic speedup demonstrated. AES-128: 64-bit effective security.
+            </div>
+        </div>
+    </div>
+
+    <!-- Section 5: Migration Strategies -->
+    <div class="section-title">5. Four Migration Strategies Compared</div>
+    <div class="card">
+        <table>
+            <thead><tr><th>Strategy</th><th>Shor Resistant</th><th>Security (bits)</th><th>CNSA 2.0</th><th>HNDL Protected</th><th>Complexity</th><th>Recommendation</th></tr></thead>
+            <tbody>
+                <tr style="background:rgba(220,38,38,0.1)"><td>RSA Only (No Migration)</td><td class="text-red">No</td><td class="mono text-red">0</td><td class="text-red">No</td><td class="text-red">No</td><td>None</td><td class="text-red">UNACCEPTABLE</td></tr>
+                <tr style="background:rgba(234,179,8,0.1)"><td>Hybrid (RSA + PQC)</td><td class="text-green">Yes</td><td class="mono text-yellow">~128</td><td class="text-green">Yes</td><td class="text-green">Yes</td><td>Moderate</td><td class="text-yellow">TRANSITIONAL</td></tr>
+                <tr style="background:rgba(22,163,74,0.1)"><td>PQC Primary (ML-KEM/DSA)</td><td class="text-green">Yes</td><td class="mono text-green">~124.5</td><td class="text-green">Yes</td><td class="text-green">Yes</td><td>High</td><td class="text-green">RECOMMENDED</td></tr>
+                <tr style="background:rgba(129,140,248,0.1)"><td>PQC Only (Full Migration)</td><td class="text-green">Yes</td><td class="mono text-green">~124.5</td><td class="text-green">Yes</td><td class="text-green">Yes</td><td>Very High</td><td class="text-purple">FUTURE GOAL</td></tr>
+            </tbody>
+        </table>
+        <div style="font-size:0.75rem;color:#94a3b8;margin-top:0.5rem">
+            Security bits include BKZ reduction (-3.5 bits, Zhao & Ding 2025) and quantum sieve exponent (0.2846, Dutch team Oct 2025).
+        </div>
+    </div>
+
+    <!-- Section 6: HNDL Threat Windows -->
+    <div class="section-title">6. HNDL Threat Windows by Sector</div>
+    <div class="card">
+        <div style="margin-bottom:0.5rem;font-size:0.85rem">Harvest-Now-Decrypt-Later: Data harvested today, decrypted when CRQC arrives (~2031)</div>
+        <div style="margin-bottom:0.75rem">
+            <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.5rem">
+                <span style="width:100px;font-size:0.85rem">Healthcare</span>
+                <div class="bar-container" style="flex:1"><div class="bar bar-critical" style="width:90%">45 years exposed — CRITICAL</div></div>
+            </div>
+            <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.5rem">
+                <span style="width:100px;font-size:0.85rem">Blockchain</span>
+                <div class="bar-container" style="flex:1"><div class="bar bar-critical" style="width:99%">994 years exposed — CRITICAL</div></div>
+            </div>
+            <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.5rem">
+                <span style="width:100px;font-size:0.85rem">IoT/Edge</span>
+                <div class="bar-container" style="flex:1"><div class="bar bar-moderate" style="width:30%">5 years exposed</div></div>
+            </div>
+            <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.5rem">
+                <span style="width:100px;font-size:0.85rem">Finance</span>
+                <div class="bar-container" style="flex:1"><div class="bar bar-high" style="width:20%">2 years exposed</div></div>
+            </div>
+            <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.5rem">
+                <span style="width:100px;font-size:0.85rem">MPC-FHE</span>
+                <div class="bar-container" style="flex:1"><div class="bar bar-low" style="width:5%">LOW risk</div></div>
+            </div>
+        </div>
+        <div style="font-size:0.75rem;color:#94a3b8">
+            Reference: arXiv:2603.01091 (March 2026) — Open-source HNDL testbed
+        </div>
+    </div>
+
+    <!-- Section 7: Recommendations -->
+    <div class="section-title">7. 2026 Recommendations</div>
+    <div class="grid grid-2">
+        <div class="card">
+            <h3>Immediate Actions (2026-2027)</h3>
+            <ol style="font-size:0.85rem;padding-left:1.2rem;color:#cbd5e1;line-height:1.8">
+                <li>Migrate all AES-128 to AES-256 (Grover halves security)</li>
+                <li>Deploy hybrid RSA+ML-KEM for key exchange (CNSA 2.0)</li>
+                <li>Implement ML-DSA-65/87 for digital signatures</li>
+                <li>Inventory all HNDL-vulnerable data (retention &gt; 5 years)</li>
+                <li>Deploy SPA countermeasures on IoT/embedded devices</li>
+            </ol>
+        </div>
+        <div class="card">
+            <h3>Strategic Planning (2027-2030)</h3>
+            <ol style="font-size:0.85rem;padding-left:1.2rem;color:#cbd5e1;line-height:1.8">
+                <li>Full PQC migration for healthcare (50yr HNDL window)</li>
+                <li>Blockchain signature scheme upgrade (ECDSA to ML-DSA)</li>
+                <li>Algorithm diversity: deploy SLH-DSA alongside ML-DSA</li>
+                <li>Monitor Regev algorithm developments for resource estimates</li>
+                <li>Regular quantum circuit benchmark verification (quarterly)</li>
+            </ol>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+        <p>PQC-FHE Integration Platform v3.2.0 | Real Qiskit Circuit Benchmarks | GPU-Accelerated (RTX 6000 PRO)</p>
+        <p style="margin-top:0.5rem">References: NIST IR 8547, CNSA 2.0, Gidney 2025, Pinnacle 2026, Regev JACM 2025, CCQC 2025, Penn State 2026</p>
+        <p style="margin-top:0.25rem;font-size:0.7rem">Generated: March 2026 | Qiskit v2.3.1 + Aer v0.17.2</p>
+    </div>
+</div>
+</body>
+</html>

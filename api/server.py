@@ -3452,6 +3452,54 @@ async def run_all_sector_benchmarks(iterations: int = 10, fhe_mode: str = "gpu")
 
 
 # =============================================================================
+# v3.2.0 ENDPOINTS: Sector Quantum Security Simulator
+# =============================================================================
+
+@app.get("/benchmarks/sector/{sector}/quantum-security", tags=["Sector Quantum Security"])
+async def sector_quantum_security(sector: str, growth_model: str = 'moderate'):
+    """
+    Run comprehensive quantum security simulation for a single sector.
+
+    Includes: Shor vs RSA, Shor vs Hybrid, Shor vs PQC Primary, Shor vs PQC Only,
+    Grover vs AES-128, Grover vs AES-256, HNDL threat analysis, migration urgency,
+    side-channel risk, and strategy comparison with recommendations.
+    """
+    try:
+        from src.sector_quantum_security import (
+            SectorQuantumSecurityAssessor, VALID_SECTORS,
+        )
+        if sector not in VALID_SECTORS:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Unknown sector: {sector}. Valid: {VALID_SECTORS}",
+            )
+        assessor = SectorQuantumSecurityAssessor(growth_model=growth_model)
+        return assessor.assess_sector(sector)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Sector quantum security failed for %s: %s", sector, e)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/benchmarks/sector-all/quantum-security", tags=["Sector Quantum Security"])
+async def all_sector_quantum_security(growth_model: str = 'moderate'):
+    """
+    Run comprehensive quantum security simulations for all 5 sectors.
+
+    Returns per-sector assessments plus cross-sector comparison with
+    migration urgency ranking and HNDL critical sectors.
+    """
+    try:
+        from src.sector_quantum_security import SectorQuantumSecurityAssessor
+        assessor = SectorQuantumSecurityAssessor(growth_model=growth_model)
+        return assessor.run_comprehensive_all_sectors()
+    except Exception as e:
+        logger.error("All-sector quantum security failed: %s", e)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# =============================================================================
 # v3.2.0 ENDPOINTS: Multi-Era Shor, Noisy Simulation, Side-Channel
 # =============================================================================
 
@@ -3755,6 +3803,145 @@ async def gl_private_inference_info():
 
 
 # =============================================================================
+# REAL QUANTUM CIRCUIT BENCHMARKS (v3.2.0)
+# =============================================================================
+
+@app.post("/benchmarks/sector/{sector}/circuit-benchmark", tags=["Quantum Circuit Benchmarks"])
+async def sector_circuit_benchmark(sector: str):
+    """
+    Run real Qiskit quantum circuit benchmarks for a specific sector.
+
+    Executes actual quantum circuits (Shor, Grover, ECC discrete log)
+    on AerSimulator (GPU/CPU) and maps results to sector-specific security.
+
+    Includes: Shor factoring (N=15,21,35), ECC dlog (GF(2^4)),
+    Grover search (4-16 qubits), Regev vs Shor comparison,
+    sector noise analysis, and HNDL simulation.
+    """
+    try:
+        from src.sector_quantum_circuit_benchmark import SectorCircuitBenchmarkRunner
+        runner = SectorCircuitBenchmarkRunner()
+        return runner.run_sector_circuit_benchmark(sector)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error("Sector circuit benchmark failed for %s: %s", sector, e)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/benchmarks/sector-all/circuit-benchmark", tags=["Quantum Circuit Benchmarks"])
+async def all_sector_circuit_benchmark():
+    """
+    Run real Qiskit quantum circuit benchmarks for all 5 sectors.
+
+    Returns comprehensive cross-sector comparison with risk ranking,
+    total circuits executed, and migration priority ordering.
+    """
+    try:
+        from src.sector_quantum_circuit_benchmark import SectorCircuitBenchmarkRunner
+        runner = SectorCircuitBenchmarkRunner()
+        return runner.run_all_sectors()
+    except Exception as e:
+        logger.error("All-sector circuit benchmark failed: %s", e)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/quantum/circuit/shor-demo", tags=["Quantum Circuit Benchmarks"])
+async def shor_circuit_demo(number: int = 15):
+    """
+    Run Shor's algorithm real quantum circuit demo.
+
+    Factors a small number (15, 21, 35, 143, 221) using actual
+    QFT-based period finding on Qiskit AerSimulator.
+    """
+    try:
+        from src.quantum_verification import ShorCircuitVerifier
+        verifier = ShorCircuitVerifier(shots=4096)
+        result = verifier.factor(number)
+        return result.to_dict()
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error("Shor circuit demo failed: %s", e)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/quantum/circuit/ecc-dlog-demo", tags=["Quantum Circuit Benchmarks"])
+async def ecc_dlog_demo(field_bits: int = 4):
+    """
+    Run ECC discrete logarithm quantum circuit demo.
+
+    Demonstrates quantum period finding for discrete log on GF(2^m),
+    with extrapolation to P-256, P-384, Ed25519, secp256k1.
+
+    Based on Roetteler et al. (2017) + arXiv:2503.02984 (March 2025).
+    """
+    try:
+        from src.sector_quantum_circuit_benchmark import ECCDiscreteLogCircuit
+        circuit = ECCDiscreteLogCircuit(shots=4096)
+        return circuit.run_demo(field_bits=field_bits)
+    except Exception as e:
+        logger.error("ECC dlog demo failed: %s", e)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/quantum/circuit/grover-demo", tags=["Quantum Circuit Benchmarks"])
+async def grover_circuit_demo(num_qubits: int = 4):
+    """
+    Run Grover's search algorithm real quantum circuit demo.
+
+    Demonstrates quadratic speedup on search spaces from 4 to 20 qubits.
+    Includes optimal iteration count and extrapolation to AES-128/256.
+    """
+    try:
+        from src.quantum_verification import GroverCircuitVerifier
+        verifier = GroverCircuitVerifier(shots=4096)
+        result = verifier.search(num_qubits=num_qubits)
+        return result.to_dict()
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error("Grover circuit demo failed: %s", e)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/quantum/circuit/regev-comparison", tags=["Quantum Circuit Benchmarks"])
+async def regev_vs_shor_comparison():
+    """
+    Compare Regev's factoring algorithm (2023) vs Shor's algorithm.
+
+    Regev: O(n^{3/2}) gates but O(n log n) qubits and sqrt(n) runs.
+    Shor: O(n^2 log n) gates but O(n) qubits and 1 run.
+
+    References: JACM Jan 2025, Journal of Cryptology 2026.
+    """
+    try:
+        from src.sector_quantum_circuit_benchmark import RegevAlgorithmDemo
+        demo = RegevAlgorithmDemo()
+        return demo.compare_resources()
+    except Exception as e:
+        logger.error("Regev comparison failed: %s", e)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/quantum/circuit/gpu-status", tags=["Quantum Circuit Benchmarks"])
+async def quantum_gpu_status():
+    """
+    Get GPU/CPU quantum simulation backend status.
+
+    Reports GPU availability (cuStateVec), max qubit counts,
+    VRAM/RAM capacity, and supported simulation methods.
+    """
+    try:
+        from src.sector_quantum_circuit_benchmark import GPUQuantumBackend
+        gpu = GPUQuantumBackend()
+        return gpu.get_capabilities()
+    except Exception as e:
+        logger.error("GPU status check failed: %s", e)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# =============================================================================
 # MAIN ENTRY POINT
 # =============================================================================
 
@@ -3784,6 +3971,8 @@ def main():
     print("GL Scheme Info: http://127.0.0.1:8000/fhe/gl-scheme/info")
     print("GL Inference: http://127.0.0.1:8000/mpc-he/gl-inference/info")
     print("Sector Benchmarks: http://127.0.0.1:8000/benchmarks/sector/healthcare")
+    print("Circuit Benchmarks: http://127.0.0.1:8000/benchmarks/sector/healthcare/circuit-benchmark")
+    print("GPU Status: http://127.0.0.1:8000/quantum/circuit/gpu-status")
     print("\n" + "=" * 60 + "\n")
 
     uvicorn.run(

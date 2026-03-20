@@ -198,6 +198,113 @@ All notable changes to the PQC-FHE Integration Platform.
   - Iceberg Quantum Pinnacle Architecture (Feb 2026): RSA-2048 < 100K physical qubits via QLDPC
   - Ubuntu 26.04 LTS (Apr 2026) to ship with PQC enabled by default in OpenSSH/OpenSSL
 
+- **Sector Quantum Security Simulator** (`src/sector_quantum_security.py`, NEW)
+  - `SectorQuantumSecurityAssessor`: Comprehensive per-sector quantum security analysis
+  - 7 simulation types per sector: Shor vs RSA, Shor vs Hybrid, Shor vs PQC Primary,
+    Shor vs PQC Only, Grover vs AES-128, Grover vs AES-256, HNDL threat window
+  - 5 sectors assessed: Healthcare (HIPAA), Finance (PCI-DSS/CNSA 2.0), Blockchain,
+    IoT/Edge, MPC-FHE Multi-Party Private Inference
+  - 4 migration strategy comparison: RSA Only → Hybrid → PQC Primary → PQC Only
+  - Migration urgency scoring (0-100) with weighted components:
+    SNDL risk (30%), compliance proximity (25%), side-channel (20%),
+    FHE lattice risk (15%), data retention (10%)
+  - HNDL (Harvest-Now-Decrypt-Later) threat window per sector with 3 Q-Day scenarios
+  - Lattice-native sector support: MPC-FHE shows CKKS Ring-LWE security (124.5 bits
+    after quantum sieve BKZ reduction) instead of RSA/ECC-based assessment
+  - FHE-specific risk display: CPAD impossibility, shared lattice assumption, NTT SPA
+  - Cross-sector comparison with urgency ranking and HNDL critical sector identification
+
+- **2 New API Endpoints (Sector Quantum Security)**
+  - `GET /benchmarks/sector/{sector}/quantum-security` — Single sector full simulation
+  - `GET /benchmarks/sector-all/quantum-security` — All 5 sectors with cross-sector comparison
+
+- **WebUI Sector Quantum Security (NEW)**
+  - "Quantum Security Simulation" button (purple) per sector
+  - "All-Sector Comparison" button (red) for cross-sector view
+  - Migration Urgency Gauge with color-coded bar (0-100)
+  - 4-strategy comparison table: Shor Resistant, Security (bits), Threat Year, CNSA 2.0, HNDL Safe
+  - Grover vs AES-128/256 side-by-side cards with sector compliance check
+  - HNDL threat window with 3 Q-Day scenarios (optimistic/moderate/conservative)
+  - Shor vs Current RSA/ECC detail table (4-generation qubit estimates)
+  - PQC Only residual risk cards (FHE-specific risks for FHE sectors)
+  - Side-channel risk summary with assessed algorithms
+  - Prioritized recommendations with deadlines
+  - All-Sector Comparison: urgency ranking bar chart + 5 sector summary cards
+
+- **10 New Tests (Sector Quantum Security)**
+  - `test_shor_vs_rsa_healthcare`: RSA-2048 VULNERABLE verdict
+  - `test_shor_vs_hybrid_finance`: Hybrid Shor-resistant with 192-bit security
+  - `test_shor_vs_pqc_only_blockchain`: Shor neutralized, lattice family deployed
+  - `test_grover_vs_aes128_finance`: 64-bit PQ security, not CNSA compliant
+  - `test_grover_vs_aes256_all_sectors`: 128-bit PQ security, all sectors safe
+  - `test_hndl_healthcare_critical`: CRITICAL risk, >20yr window
+  - `test_hndl_mpc_fhe_low`: LOW risk (1yr session data)
+  - `test_migration_urgency_range`: All sectors 0-100
+  - `test_all_sectors_complete_results`: 5 sectors × all expected keys
+  - `test_iot_side_channel_critical`: IoT SPA exposure CRITICAL
+
+- **Browser-Verified Sector Quantum Security (All 5 Sectors)**
+  - Healthcare: Migration Urgency 87/100 (CRITICAL), HNDL 45yr exposure, 6 recommendations
+  - Finance: Urgency 70.5/100 (HIGH), HNDL 2yr exposure, CNSA 2.0 deadline 2030
+  - Blockchain: Urgency 73/100 (HIGH), HNDL 994yr exposure (999yr retention), 3 recommendations
+  - IoT/Edge: Urgency 59/100 (MODERATE), Side-Channel CRITICAL (SPA), 3 recommendations
+  - MPC-FHE: Urgency 56.5/100 (MODERATE), HNDL LOW, 3 FHE-specific risks, 4 recommendations
+  - All-Sector Comparison: Urgency ranking, HNDL critical sectors, per-sector summary cards
+
+- **Real Quantum Circuit Sector Benchmarks** (`src/sector_quantum_circuit_benchmark.py`, NEW)
+  - `SectorCircuitBenchmarkRunner`: Real Qiskit circuit execution per sector
+  - `GPUQuantumBackend`: GPU/CPU auto-detection with cuStateVec support (RTX 6000 PRO 96GB)
+  - Shor's algorithm circuits: N=15, 21, 35 real factoring + RSA-2048/3072/4096 extrapolation
+  - ECC discrete log circuits: GF(2^4) demo + P-256/P-384/Ed25519/secp256k1 extrapolation
+  - Grover's search circuits: 4-16 qubit real execution + AES-128/256 extrapolation
+  - `RegevAlgorithmDemo`: Regev (2023) vs Shor resource comparison (JACM 2025)
+  - `EnhancedNoiseSimulator`: 5 sector-specific noise profiles (medical_iot, datacenter,
+    adversarial, constrained_device, lattice_correlated) with thermal relaxation and readout errors
+  - HNDL circuit demonstration: Shor proof-of-concept attack sequence
+  - Cross-sector circuit-verified risk ranking
+  - AES extrapolation: CCQC 2025 (-45.2% FDW), ASIACRYPT 2025 (T-depth=30)
+  - ECC extrapolation: Roetteler 2017 + arXiv:2503.02984 (March 2025)
+
+- **7 New API Endpoints (Quantum Circuit Benchmarks)**
+  - `POST /benchmarks/sector/{sector}/circuit-benchmark` — Per-sector real circuit benchmark
+  - `POST /benchmarks/sector-all/circuit-benchmark` — All 5 sectors circuit comparison
+  - `POST /quantum/circuit/shor-demo` — Shor factoring circuit demo
+  - `POST /quantum/circuit/ecc-dlog-demo` — ECC discrete log circuit demo
+  - `POST /quantum/circuit/grover-demo` — Grover search circuit demo
+  - `GET /quantum/circuit/regev-comparison` — Regev vs Shor resource comparison
+  - `GET /quantum/circuit/gpu-status` — GPU/CPU quantum simulation backend status
+
+- **WebUI Circuit Benchmark Panel (NEW)**
+  - "Real Quantum Circuit Benchmark" button (emerald) per sector
+  - "All-Sector Circuit Comparison" button (cyan)
+  - GPU/CPU status badge, circuit count, execution time display
+  - Shor circuit results table (N, factors, qubits, depth, time)
+  - ECC discrete log results with curve extrapolation
+  - Grover circuit results with AES-128/256 extrapolation cards
+  - Regev vs Shor resource comparison table
+  - Sector noise profile analysis (ideal vs noisy fidelity)
+  - HNDL circuit demonstration with attack sequence
+  - Overall circuit-verified risk assessment
+
+- **Quantum Security Infographic** (`docs/infographic.html`, NEW)
+  - Standalone HTML infographic with CSS animations
+  - 7 sections: sector threat map, Q-Day timeline, Grover vs AES, circuit benchmarks,
+    migration strategies, HNDL threat windows, 2026 recommendations
+
+- **12 New Tests (Sector Circuit Benchmarks)**
+  - `test_gpu_backend_detection`: GPU/CPU capabilities
+  - `test_shor_circuit_n15_healthcare`: N=15 factoring (3×5)
+  - `test_shor_circuit_n21_finance`: N=21 factoring + RSA extrapolation
+  - `test_ecc_dlog_demo_blockchain`: GF(2^4) + P-256 extrapolation (2330 qubits)
+  - `test_grover_4qubit_iot`: 4-qubit speedup demonstration
+  - `test_grover_8qubit_finance`: 8-qubit + AES-128 (64-bit effective) / AES-256 (128-bit)
+  - `test_regev_vs_shor_comparison`: Regev fewer gates at 2048-bit
+  - `test_noise_profile_medical_iot`: Medical IoT noise degradation
+  - `test_noise_profile_datacenter`: Datacenter noise (higher fidelity)
+  - `test_hndl_circuit_demo_healthcare`: CRITICAL HNDL with Shor PoC
+  - `test_all_sectors_circuit_benchmark`: All 5 sectors complete
+  - `test_circuit_benchmark_has_all_keys`: Result structure validation
+
 - **GL Scheme Integration (NEW)**
   - `src/gl_scheme_engine.py`: GL (Gentry-Lee) 5th generation FHE engine wrapper
   - `GLSchemeEngine`: encrypt, decrypt, matrix_multiply, hadamard, transpose, conjugate

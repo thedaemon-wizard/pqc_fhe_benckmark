@@ -1751,6 +1751,110 @@ class TestCKKSSideChannel(unittest.TestCase):
         self.assertEqual(ALGORITHM_QUANTUM_STATUS['CKKS']['family'], 'lattice')
 
 
+class TestSectorQuantumSecurity(unittest.TestCase):
+    """Tests for sector-specific quantum security simulator (v3.2.0)."""
+
+    def test_shor_vs_rsa_healthcare(self):
+        """Healthcare Shor vs RSA should show RSA-2048 as VULNERABLE."""
+        from src.sector_quantum_security import SectorQuantumSecurityAssessor
+        assessor = SectorQuantumSecurityAssessor(growth_model='moderate')
+        result = assessor.assess_sector('healthcare')
+        shor_rsa = result['shor_vs_rsa']
+        self.assertEqual(shor_rsa['overall_verdict'], 'VULNERABLE')
+        self.assertGreater(len(shor_rsa['algorithm_assessments']), 0)
+        self.assertIn('earliest_threat_year', shor_rsa)
+
+    def test_shor_vs_hybrid_finance(self):
+        """Finance hybrid strategy should be Shor-resistant."""
+        from src.sector_quantum_security import SectorQuantumSecurityAssessor
+        assessor = SectorQuantumSecurityAssessor()
+        result = assessor.assess_sector('finance')
+        hybrid = result['shor_vs_hybrid']
+        self.assertTrue(hybrid['overall_shor_resistant'])
+        self.assertGreater(hybrid['effective_security_bits'], 0)
+
+    def test_shor_vs_pqc_only_blockchain(self):
+        """Blockchain PQC-only should neutralize Shor completely."""
+        from src.sector_quantum_security import SectorQuantumSecurityAssessor
+        assessor = SectorQuantumSecurityAssessor()
+        result = assessor.assess_sector('blockchain')
+        pqc_only = result['shor_vs_pqc_only']
+        self.assertTrue(pqc_only['shor_completely_neutralized'])
+        self.assertTrue(pqc_only['classical_algorithms_removed'])
+        self.assertIn('lattice', pqc_only['pqc_families_deployed'])
+
+    def test_grover_vs_aes128_finance(self):
+        """AES-128 should provide only 64-bit post-quantum security."""
+        from src.sector_quantum_security import SectorQuantumSecurityAssessor
+        assessor = SectorQuantumSecurityAssessor()
+        result = assessor.assess_sector('finance')
+        aes128 = result['grover_vs_aes128']
+        self.assertEqual(aes128['post_quantum_security_bits'], 64)
+        self.assertFalse(aes128['cnsa_2_0_compliant'])
+
+    def test_grover_vs_aes256_all_sectors(self):
+        """AES-256 should be quantum-safe for all sectors."""
+        from src.sector_quantum_security import SectorQuantumSecurityAssessor, VALID_SECTORS
+        assessor = SectorQuantumSecurityAssessor()
+        for sector in VALID_SECTORS:
+            result = assessor.assess_sector(sector)
+            aes256 = result['grover_vs_aes256']
+            self.assertEqual(aes256['post_quantum_security_bits'], 128)
+            self.assertTrue(aes256['cnsa_2_0_compliant'])
+
+    def test_hndl_healthcare_critical(self):
+        """Healthcare HNDL risk should be CRITICAL (50yr retention)."""
+        from src.sector_quantum_security import SectorQuantumSecurityAssessor
+        assessor = SectorQuantumSecurityAssessor()
+        result = assessor.assess_sector('healthcare')
+        hndl = result['hndl_analysis']
+        self.assertEqual(hndl['risk_level'], 'CRITICAL')
+        self.assertGreater(hndl['moderate_hndl_window_years'], 20)
+
+    def test_hndl_mpc_fhe_low(self):
+        """MPC-FHE HNDL risk should be LOW (1yr session data)."""
+        from src.sector_quantum_security import SectorQuantumSecurityAssessor
+        assessor = SectorQuantumSecurityAssessor()
+        result = assessor.assess_sector('mpc-fhe')
+        hndl = result['hndl_analysis']
+        self.assertEqual(hndl['risk_level'], 'LOW')
+
+    def test_migration_urgency_range(self):
+        """Migration urgency should be 0-100 for all sectors."""
+        from src.sector_quantum_security import SectorQuantumSecurityAssessor, VALID_SECTORS
+        assessor = SectorQuantumSecurityAssessor()
+        for sector in VALID_SECTORS:
+            result = assessor.assess_sector(sector)
+            score = result['migration_urgency']['overall_score']
+            self.assertGreaterEqual(score, 0)
+            self.assertLessEqual(score, 100)
+
+    def test_all_sectors_complete_results(self):
+        """All 5 sectors should return complete quantum security assessment."""
+        from src.sector_quantum_security import SectorQuantumSecurityAssessor
+        assessor = SectorQuantumSecurityAssessor()
+        all_results = assessor.run_comprehensive_all_sectors()
+        self.assertEqual(all_results['summary']['total_sectors'], 5)
+        self.assertEqual(all_results['summary']['assessed'], 5)
+        expected_keys = [
+            'shor_vs_rsa', 'shor_vs_hybrid', 'shor_vs_pqc_primary',
+            'shor_vs_pqc_only', 'grover_vs_aes128', 'grover_vs_aes256',
+            'hndl_analysis', 'migration_urgency',
+        ]
+        for sector, data in all_results['sectors'].items():
+            for key in expected_keys:
+                self.assertIn(key, data, f"{sector} missing key: {key}")
+
+    def test_iot_side_channel_critical(self):
+        """IoT side-channel exposure should be CRITICAL."""
+        from src.sector_quantum_security import SectorQuantumSecurityAssessor
+        assessor = SectorQuantumSecurityAssessor()
+        result = assessor.assess_sector('iot')
+        self.assertEqual(
+            result['side_channel_risk']['sector_exposure'], 'CRITICAL'
+        )
+
+
 class TestSectorQuantumContext(unittest.TestCase):
     """Tests for sector-specific quantum security context."""
 
@@ -1979,6 +2083,162 @@ class TestSectorBenchmarkGL(unittest.TestCase):
 
 
 # =============================================================================
+# SECTOR QUANTUM CIRCUIT BENCHMARKS (v3.2.0)
+# =============================================================================
+
+class TestSectorCircuitBenchmark(unittest.TestCase):
+    """Tests for real Qiskit quantum circuit sector benchmarks."""
+
+    @classmethod
+    def setUpClass(cls):
+        from src.sector_quantum_circuit_benchmark import (
+            GPUQuantumBackend,
+            SectorCircuitBenchmarkRunner,
+            EnhancedNoiseSimulator,
+            ECCDiscreteLogCircuit,
+            RegevAlgorithmDemo,
+        )
+        cls.gpu = GPUQuantumBackend()
+        cls.runner = SectorCircuitBenchmarkRunner()
+        cls.noise_sim = EnhancedNoiseSimulator()
+        cls.ecc_circuit = ECCDiscreteLogCircuit()
+        cls.regev = RegevAlgorithmDemo()
+
+    def test_gpu_backend_detection(self):
+        """GPU backend should report capabilities correctly."""
+        caps = self.gpu.get_capabilities()
+        self.assertIn('gpu_available', caps)
+        self.assertIn('backend_type', caps)
+        self.assertIn('max_qubits_cpu', caps)
+        self.assertGreater(caps['max_qubits_cpu'], 0)
+        self.assertIn('ram_gb', caps)
+
+    def test_shor_circuit_n15_healthcare(self):
+        """Shor circuit should successfully factor N=15 for healthcare sector."""
+        result = self.runner.run_sector_circuit_benchmark('healthcare')
+        shor = result['shor_circuits']
+        self.assertEqual(shor['status'], 'completed')
+        n15 = next(c for c in shor['demo_circuits'] if c['N'] == 15)
+        self.assertTrue(n15['success'])
+        self.assertIn(3, n15['factors_found'])
+        self.assertIn(5, n15['factors_found'])
+        self.assertGreater(n15['num_qubits'], 0)
+
+    def test_shor_circuit_n21_finance(self):
+        """Shor circuit should factor N=21 with RSA extrapolation for finance."""
+        result = self.runner.run_sector_circuit_benchmark('finance')
+        shor = result['shor_circuits']
+        n21 = next(c for c in shor['demo_circuits'] if c['N'] == 21)
+        self.assertTrue(n21['success'])
+        # Finance uses RSA-2048/4096, check extrapolation exists
+        self.assertIn('extrapolation', shor)
+        rsa_keys = shor['extrapolation'].get('rsa_keys', [])
+        self.assertGreater(len(rsa_keys), 0)
+
+    def test_ecc_dlog_demo_blockchain(self):
+        """ECC discrete log demo should run with curve extrapolation for blockchain."""
+        result = self.runner.run_sector_circuit_benchmark('blockchain')
+        ecc = result['ecc_dlog_circuits']
+        self.assertEqual(ecc['status'], 'completed')
+        demo = ecc['demo_result']
+        self.assertIn('total_qubits', demo)
+        self.assertIn('extrapolation', demo)
+        # P-256 extrapolation should exist
+        self.assertIn('P-256', demo['extrapolation'])
+        self.assertEqual(demo['extrapolation']['P-256']['estimated_qubits'], 2330)
+
+    def test_grover_4qubit_iot(self):
+        """4-qubit Grover should demonstrate speedup for IoT sector."""
+        result = self.runner.run_sector_circuit_benchmark('iot')
+        grover = result['grover_circuits']
+        self.assertEqual(grover['status'], 'completed')
+        g4 = next(c for c in grover['demo_circuits'] if c['num_qubits'] == 4)
+        self.assertTrue(g4['success'])
+        self.assertGreater(g4['speedup_factor'], 1.0)
+
+    def test_grover_8qubit_finance(self):
+        """8-qubit Grover with AES extrapolation for finance."""
+        result = self.runner.run_sector_circuit_benchmark('finance')
+        grover = result['grover_circuits']
+        g8 = next(c for c in grover['demo_circuits'] if c['num_qubits'] == 8)
+        self.assertTrue(g8['success'])
+        # AES extrapolation
+        self.assertIn(128, grover['extrapolation'])
+        self.assertEqual(grover['extrapolation'][128]['effective_security_bits'], 64)
+        self.assertIn(256, grover['extrapolation'])
+        self.assertEqual(grover['extrapolation'][256]['effective_security_bits'], 128)
+
+    def test_regev_vs_shor_comparison(self):
+        """Regev should have fewer gates than Shor for large key sizes."""
+        result = self.regev.compare_resources([8, 2048])
+        self.assertEqual(len(result['comparisons']), 2)
+        large = next(c for c in result['comparisons'] if c['bit_size'] == 2048)
+        # Regev has O(n^{3/2}) gates vs Shor O(n^2 log n) — Regev wins for large n
+        self.assertEqual(large['advantage'], 'Regev')
+        self.assertLess(large['gate_ratio'], 1.0)
+
+    def test_noise_profile_medical_iot(self):
+        """Medical IoT noise should degrade circuit fidelity."""
+        result = self.noise_sim.run_sector_noise_profile(
+            'healthcare', circuit_type='grover', num_qubits=4
+        )
+        self.assertEqual(result['noise_profile'], 'medical_iot')
+        self.assertGreater(result['ideal_success_probability'], 0)
+        # Medical IoT has high noise — fidelity should be degraded
+        self.assertLessEqual(result['fidelity_ratio'], 1.0)
+        self.assertIn('assessment', result)
+
+    def test_noise_profile_datacenter(self):
+        """Datacenter noise should maintain higher fidelity than medical IoT."""
+        dc_result = self.noise_sim.run_sector_noise_profile(
+            'finance', circuit_type='grover', num_qubits=4
+        )
+        self.assertEqual(dc_result['noise_profile'], 'datacenter')
+        # Datacenter has lower noise → higher fidelity
+        self.assertGreater(dc_result['fidelity_ratio'], 0)
+        self.assertIn('assessment', dc_result)
+
+    def test_hndl_circuit_demo_healthcare(self):
+        """Healthcare HNDL should show CRITICAL risk with proof-of-concept."""
+        result = self.runner.run_sector_circuit_benchmark('healthcare')
+        hndl = result['hndl_simulation']
+        self.assertEqual(hndl['hndl_risk'], 'CRITICAL')
+        self.assertGreater(hndl['hndl_window_years'], 20)
+        self.assertEqual(hndl['data_retention_years'], 50)
+        self.assertIn('attack_sequence', hndl)
+        # Shor proof-of-concept should exist
+        self.assertIsNotNone(hndl.get('shor_proof_of_concept'))
+
+    def test_all_sectors_circuit_benchmark(self):
+        """All 5 sectors should complete circuit benchmarks."""
+        result = self.runner.run_all_sectors()
+        self.assertIn('sectors', result)
+        self.assertEqual(len(result['sectors']), 5)
+        for sector in ['healthcare', 'finance', 'blockchain', 'iot', 'mpc-fhe']:
+            self.assertIn(sector, result['sectors'])
+            self.assertNotIn('error', result['sectors'][sector])
+        # Cross-sector comparison
+        self.assertIn('cross_sector_comparison', result)
+        self.assertIn('risk_ranking', result['cross_sector_comparison'])
+
+    def test_circuit_benchmark_has_all_keys(self):
+        """Circuit benchmark result should contain all expected keys."""
+        result = self.runner.run_sector_circuit_benchmark('healthcare')
+        expected_keys = [
+            'sector', 'sector_name', 'timestamp', 'gpu_backend',
+            'shor_circuits', 'ecc_dlog_circuits', 'grover_circuits',
+            'regev_comparison', 'noise_analysis', 'hndl_simulation',
+            'execution_summary',
+        ]
+        for key in expected_keys:
+            self.assertIn(key, result, f"Missing key: {key}")
+        # Execution summary should have risk assessment
+        self.assertIn('sector_risk_assessment', result['execution_summary'])
+        self.assertIn('circuits_executed', result['execution_summary'])
+        self.assertGreater(result['execution_summary']['circuits_executed'], 0)
+
+
+# =============================================================================
 # MAIN
 # =============================================================================
 
@@ -2016,6 +2276,9 @@ def run_tests():
     suite.addTests(loader.loadTestsFromTestCase(TestGLSideChannelAssessment))
     suite.addTests(loader.loadTestsFromTestCase(TestQuantumThreatGLScheme))
     suite.addTests(loader.loadTestsFromTestCase(TestSectorBenchmarkGL))
+
+    # v3.2.0 real circuit benchmarks
+    suite.addTests(loader.loadTestsFromTestCase(TestSectorCircuitBenchmark))
 
     # Run tests
     runner = unittest.TextTestRunner(verbosity=2)
