@@ -554,14 +554,6 @@ pqc_fhe_benckmark/
 ├── logs/                      # Log files (auto-created)
 └── README.md
 ```
-
-## Documentation
-
-- [Technical Report v3.2.0 (PDF)](docs/PQC_FHE_Technical_Report_v3.2.0_Enterprise.pdf)
-- [Technical Report v3.2.0 (Word)](docs/PQC_FHE_Technical_Report_v3.2.0_Enterprise.docx)
-- [API Documentation](http://localhost:8000/docs) (Swagger UI)
-- [CHANGELOG](CHANGELOG.md)
-
 ## Development Environment
 
 | Component | Specification |
