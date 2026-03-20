@@ -15,6 +15,8 @@ Production-ready framework combining **Post-Quantum Cryptography (PQC)** with **
 - [Technical Report v3.2.0 (PDF)](docs/PQC_FHE_Technical_Report_v3.2.0_Enterprise.pdf)
 - [Technical Report v3.2.0 (Word)](docs/PQC_FHE_Technical_Report_v3.2.0_Enterprise.docx)
 - [CHANGELOG](CHANGELOG.md)
+- [Summary Page(infographic)](https://thedaemon-wizard.github.io/pqc_fhe_benckmark/infographic.html)
+
 
 ## What's New in v3.2.0
 
@@ -56,7 +58,18 @@ Production-ready framework combining **Post-Quantum Cryptography (PQC)** with **
 - Masking verification (liboqs/pqcrystals/pqm4)
 - HQC (code-based KEM) integration for lattice diversification
 
-### 13 New API Endpoints (total)
+### Real Quantum Circuit Sector Benchmarks (NEW)
+- **Actual Qiskit circuit execution** per sector — not mathematical estimates
+- **Shor's algorithm circuits**: N=15, 21, 35 real QFT-based factoring on AerSimulator
+- **ECC discrete log circuits**: GF(2^4) quantum period finding + P-256/P-384/Ed25519 extrapolation
+- **Grover's search circuits**: 4-16 qubit real amplitude amplification on AerSimulator
+- **Regev vs Shor comparison**: O(n^{3/2}) gates vs O(n^2 log n) resource analysis (JACM 2025)
+- **Enhanced noise models**: 5 sector-specific profiles (medical IoT, datacenter, adversarial, constrained device, lattice correlated)
+- **GPU acceleration**: RTX 6000 PRO Blackwell 96GB via cuStateVec (32 qubits max)
+- **HNDL circuit demonstration**: Shor proof-of-concept attack sequence
+- **Quantum Security Infographic**: Standalone HTML with CSS animations (`docs/infographic.html`)
+
+### 22 New API Endpoints (total)
 - `GET /quantum/shor-resources/multi-era` - 4-generation Shor resource comparison
 - `POST /quantum/simulate/noisy` - Noise-aware quantum simulation
 - `GET /security/side-channel/{algorithm}` - Per-algorithm side-channel assessment
@@ -67,6 +80,13 @@ Production-ready framework combining **Post-Quantum Cryptography (PQC)** with **
 - `GET /quantum/ckks-security` - CKKS Ring-LWE security verification
 - `GET /quantum/ckks-security/all-configs` - All CKKS config security comparison
 - `GET /security/fhe-quantum-risk` - FHE quantum risk with business context
+- `POST /benchmarks/sector/{sector}/circuit-benchmark` - Per-sector real Qiskit circuit benchmark
+- `POST /benchmarks/sector-all/circuit-benchmark` - All 5 sectors circuit comparison
+- `POST /quantum/circuit/shor-demo` - Shor factoring real circuit demo
+- `POST /quantum/circuit/ecc-dlog-demo` - ECC discrete log circuit demo
+- `POST /quantum/circuit/grover-demo` - Grover search real circuit demo
+- `GET /quantum/circuit/regev-comparison` - Regev vs Shor resource comparison
+- `GET /quantum/circuit/gpu-status` - GPU/CPU quantum simulation backend status
 
 ### Dynamic Version Management (NEW)
 - Centralized `version.json` configuration for all module versions
@@ -87,6 +107,24 @@ Production-ready framework combining **Post-Quantum Cryptography (PQC)** with **
 - `GET /fhe/gl-scheme/info` - GL scheme capabilities and status
 - `GET /fhe/gl-scheme/security` - GL security info and known vulnerabilities
 - `GET /mpc-he/gl-inference/info` - GL private inference capabilities
+
+### Sector Quantum Security Simulator (NEW)
+- **Per-sector quantum security analysis** for 5 industry sectors: Healthcare (HIPAA), Finance (PCI-DSS/CNSA 2.0), Blockchain, IoT/Edge, MPC-FHE
+- **7 simulation types per sector**:
+  - Shor vs RSA/ECC: 4-generation qubit estimates for current keys
+  - Shor vs Hybrid (RSA+PQC): Transitional security analysis
+  - Shor vs PQC Primary (ML-KEM/ML-DSA): Post-migration lattice security
+  - Shor vs PQC Only: Full migration residual risks (lattice monoculture, CPAD)
+  - Grover vs AES-128: 64-bit PQ security — insufficient for CNSA 2.0
+  - Grover vs AES-256: 128-bit PQ security — quantum-safe
+  - HNDL threat window: Data retention vs Q-Day scenarios
+- **Migration urgency scoring** (0-100): SNDL risk (30%), compliance proximity (25%), side-channel (20%), FHE lattice risk (15%), data retention (10%)
+- **Cross-sector comparison**: Urgency ranking, HNDL critical sector identification
+- **Key findings**: Healthcare CRITICAL (87/100, 45yr HNDL exposure), Blockchain HIGH (73/100, 994yr HNDL), Finance HIGH (70.5/100, CNSA 2.0 2030 deadline)
+
+### 2 New API Endpoints (Sector Quantum Security)
+- `GET /benchmarks/sector/{sector}/quantum-security` - Single sector full simulation (Shor×4 + Grover×2 + HNDL)
+- `GET /benchmarks/sector-all/quantum-security` - All 5 sectors with cross-sector comparison and urgency ranking
 
 ### 2026 Research Updates (March 2026, Updated)
 
@@ -237,13 +275,11 @@ Production-ready framework combining **Post-Quantum Cryptography (PQC)** with **
 - Rotating log files (10MB max, 5 backups)
 - Separate error and access logs
 - Configurable log levels
->>>>>>> origin/main
 
 ## Key Features
 
 | Feature | Technology | Status |
 |---------|------------|--------|
-<<<<<<< HEAD
 | Post-Quantum KEM | ML-KEM-512/768/1024 (FIPS 203) | Production |
 | Post-Quantum Signatures | ML-DSA-44/65/87 (FIPS 204) | Production |
 | Hybrid Key Exchange | X25519 + ML-KEM-768 | Production |
@@ -254,17 +290,6 @@ Production-ready framework combining **Post-Quantum Cryptography (PQC)** with **
 | GPU Acceleration | CUDA 13.0 / RTX 6000 PRO | **v3.0.0** |
 | Kubernetes Deployment | Helm Chart | Production |
 | Monitoring | Prometheus + Grafana | Production |
-=======
-| Post-Quantum KEM | ML-KEM-768 (FIPS 203) | ✅ Production |
-| Post-Quantum Signatures | ML-DSA-65 (FIPS 204) | ✅ Production |
-| Hybrid Key Exchange | X25519 + ML-KEM-768 | ✅ Production |
-| Homomorphic Encryption | CKKS (DESILO FHE) | ✅ Production |
-| Kubernetes Deployment | Helm Chart | ✅ Production |
-| Monitoring | Prometheus + Grafana | ✅ Production |
-| File Logging | RotatingFileHandler | ✅ Production |
-
-
->>>>>>> origin/main
 
 ## Quick Start
 
@@ -441,7 +466,6 @@ python -m uvicorn api.server:app
 
 ## API Endpoints
 
-<<<<<<< HEAD
 ### Quantum Threat Assessment (v3.0.0)
 
 | Endpoint | Method | Description |
@@ -469,9 +493,6 @@ python -m uvicorn api.server:app
 | `/mpc-he/demo/{demo_type}` | POST | Run MPC-HE demo (linear_regression/classification/statistics) |
 
 ### Hybrid Key Exchange
-=======
-### Hybrid Key Exchange (v2.3.5)
->>>>>>> origin/main
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
@@ -499,7 +520,6 @@ python -m uvicorn api.server:app
 | `/fhe/add` | POST | Homomorphic addition |
 | `/fhe/multiply` | POST | Homomorphic multiplication |
 
-<<<<<<< HEAD
 ### Extended Benchmarks (v3.0.0)
 
 | Endpoint | Method | Description |
@@ -533,14 +553,11 @@ python -m uvicorn api.server:app
 | `/benchmarks/sector/{sector}` | GET | Per-sector benchmarks |
 | `/benchmarks/sector-all` | GET | All-sector combined benchmarks |
 
-=======
->>>>>>> origin/main
 ## Project Structure
 
 ```
 pqc_fhe_benckmark/
 ├── api/
-<<<<<<< HEAD
 │   └── server.py              # FastAPI server (v3.2.0, 64 endpoints)
 ├── src/
 │   ├── pqc_fhe_integration.py # Core PQC + FHE integration
@@ -597,46 +614,12 @@ pqc_fhe_benckmark/
 - desilofhe / desilofhe-cu130 (FHE, optional for GPU)
 - numpy >= 1.21
 - fastapi >= 0.100, uvicorn >= 0.23
-=======
-│   └── server.py              # FastAPI server (v2.3.5)
-├── kubernetes/
-│   └── helm/pqc-fhe/          # Helm chart
-│       ├── Chart.yaml
-│       ├── values.yaml
-│       └── templates/
-│           ├── deployment.yaml
-│           ├── service.yaml
-│           ├── hpa.yaml
-│           ├── servicemonitor.yaml
-│           └── ...
-├── monitoring/
-│   └── prometheus.yml         # Prometheus config
-├── web_ui/
-│   └── index.html             # React Web UI
-├── docs/
-│   ├── PQC_FHE_Technical_Report_v2.3.5_Complete.pdf
-│   └── PQC_FHE_Technical_Report_v2.3.5_Complete.docx
-├── logs/                      # Log files (auto-created)
-│   ├── pqc_fhe_server.log
-│   ├── pqc_fhe_error.log
-│   └── pqc_fhe_access.log
-└── README.md
-```
-
-## Requirements
-
-- Python 3.9+
-- liboqs-python (build from source)
-- cryptography (for X25519)
-- desilofhe (FHE library)
->>>>>>> origin/main
 - Kubernetes 1.24+ (for Helm deployment)
 
 ## References
 
 1. NIST FIPS 203: ML-KEM Standard (August 2024)
 2. NIST FIPS 204: ML-DSA Standard (August 2024)
-<<<<<<< HEAD
 3. NIST FIPS 205: SLH-DSA Standard (August 2024)
 4. NIST IR 8547: Transition to Post-Quantum Cryptography Standards (November 2024)
 5. NIST IR 8545: HQC Selection as 4th-round KEM (March 2025)
@@ -690,16 +673,6 @@ pqc_fhe_benckmark/
 - Comprehensive test suite (65 tests)
 
 ### v2.3.5 (2025-12-30)
-=======
-3. IETF draft-ietf-tls-ecdhe-mlkem: Hybrid Key Exchange
-4. NIST IR 8547: PQC Migration Guidelines
-5. DESILO FHE Library: https://fhe.desilo.dev/
-6. Kubernetes Helm: https://helm.sh/docs/
-
-## Version History
-
-### v2.3.5 Complete (2025-12-30)
->>>>>>> origin/main
 - X25519 + ML-KEM hybrid key exchange
 - Kubernetes Helm chart with GPU support
 - Prometheus monitoring and alerting
@@ -716,8 +689,4 @@ MIT License - see [LICENSE](LICENSE) for details.
 
 ---
 
-<<<<<<< HEAD
 **Security Notice**: This platform implements NIST-standardized post-quantum cryptography (FIPS 203/204/205) with quantum threat assessment, NIST IR 8547 compliance scoring, and privacy-preserving multi-party computation.
-=======
-**Security Notice**: This platform implements NIST-standardized post-quantum cryptography with Kubernetes deployment support and comprehensive monitoring.
->>>>>>> origin/main

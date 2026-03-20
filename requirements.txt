@@ -82,6 +82,7 @@ desilofhe-cu130>=1.10.0  # For CUDA 13.0 GPU benchmarks
 # =============================================================================
 # Qiskit - IBM Quantum Computing SDK for real circuit simulation
 # Used for Shor's and Grover's algorithm verification
+<<<<<<< HEAD
 qiskit>=1.0.0
 qiskit-aer>=0.14.0
 
@@ -89,6 +90,11 @@ qiskit-aer>=0.14.0
 # =============================================================================
 
 >>>>>>> origin/main
+=======
+qiskit>=2.0.0
+qiskit-aer>=0.17.0
+qiskit-aer-gpu-cu11>=0.17.0  # For GPU-accelerated quantum simulation (CUDA 11.x)
+>>>>>>> goofy-stonebraker
 # =============================================================================
 # Classical Cryptography (Hybrid Mode)
 # =============================================================================

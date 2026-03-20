@@ -1762,11 +1762,19 @@
             );
         };
 
-        // Sector Benchmarks Tab (v3.1.0)
+        // Sector Benchmarks Tab (v3.2.0) — Performance + Quantum Security Simulator
         const SectorBenchmarksTab = () => {
             const [sector, setSector] = useState('healthcare');
             const [results, setResults] = useState(null);
             const [loading, setLoading] = useState(false);
+            const [qsResults, setQsResults] = useState(null);
+            const [qsLoading, setQsLoading] = useState(false);
+            const [allQs, setAllQs] = useState(null);
+            const [allQsLoading, setAllQsLoading] = useState(false);
+            const [circuitResults, setCircuitResults] = useState(null);
+            const [circuitLoading, setCircuitLoading] = useState(false);
+            const [allCircuit, setAllCircuit] = useState(null);
+            const [allCircuitLoading, setAllCircuitLoading] = useState(false);
 
             const sectors = [
                 { value: 'healthcare', label: 'Healthcare (HIPAA)', color: 'red' },
@@ -1785,13 +1793,63 @@
                 setLoading(false);
             };
 
+            const runQuantumSecurity = async () => {
+                setQsLoading(true);
+                try {
+                    const data = await apiCall(`/benchmarks/sector/${sector}/quantum-security?growth_model=moderate`);
+                    setQsResults(data);
+                } catch (e) { console.error(e); }
+                setQsLoading(false);
+            };
+
+            const runAllSectorQuantumSecurity = async () => {
+                setAllQsLoading(true);
+                try {
+                    const data = await apiCall(`/benchmarks/sector-all/quantum-security?growth_model=moderate`);
+                    setAllQs(data);
+                } catch (e) { console.error(e); }
+                setAllQsLoading(false);
+            };
+
+            const runCircuitBenchmark = async () => {
+                setCircuitLoading(true);
+                try {
+                    const data = await apiCall(`/benchmarks/sector/${sector}/circuit-benchmark`, { method: 'POST' });
+                    setCircuitResults(data);
+                } catch (e) { console.error(e); }
+                setCircuitLoading(false);
+            };
+
+            const runAllSectorCircuit = async () => {
+                setAllCircuitLoading(true);
+                try {
+                    const data = await apiCall(`/benchmarks/sector-all/circuit-benchmark`, { method: 'POST' });
+                    setAllCircuit(data);
+                } catch (e) { console.error(e); }
+                setAllCircuitLoading(false);
+            };
+
+            const urgencyColor = (score) => score >= 80 ? 'red' : score >= 60 ? 'orange' : score >= 40 ? 'yellow' : 'green';
+            const riskBadge = (level) => {
+                const colors = { CRITICAL: 'bg-red-100 text-red-700', HIGH: 'bg-orange-100 text-orange-700', MODERATE: 'bg-yellow-100 text-yellow-700', LOW: 'bg-green-100 text-green-700' };
+                return <span className={`px-2 py-0.5 rounded text-xs font-medium ${colors[level] || 'bg-gray-100 text-gray-700'}`}>{level}</span>;
+            };
+
             return (
                 <div className="space-y-6">
                     <div className="text-center"><h3 className="text-xl font-bold text-gray-800 mb-2">Sector-Specific Benchmarks</h3><p className="text-gray-600">Real PQC + FHE performance measurements for industry use cases</p></div>
                     <div className="flex flex-wrap gap-2 justify-center">
-                        {sectors.map(s => (<button key={s.value} onClick={() => { setSector(s.value); setResults(null); }} className={`px-4 py-2 rounded-lg font-medium transition ${sector === s.value ? 'bg-blue-600 text-white shadow' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>{s.label}</button>))}
+                        {sectors.map(s => (<button key={s.value} onClick={() => { setSector(s.value); setResults(null); setQsResults(null); }} className={`px-4 py-2 rounded-lg font-medium transition ${sector === s.value ? 'bg-blue-600 text-white shadow' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>{s.label}</button>))}
                     </div>
-                    <div className="text-center"><button onClick={runBenchmark} disabled={loading} className="bg-blue-600 text-white px-8 py-3 rounded-xl font-medium hover:bg-blue-700 disabled:opacity-50 transition">{loading ? (<span className="flex items-center gap-2"><svg className="animate-spin w-5 h-5" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>Running Benchmarks...</span>) : `Run ${sectors.find(s => s.value === sector)?.label} Benchmarks`}</button></div>
+                    <div className="flex flex-wrap gap-3 justify-center">
+                        <button onClick={runBenchmark} disabled={loading} className="bg-blue-600 text-white px-6 py-3 rounded-xl font-medium hover:bg-blue-700 disabled:opacity-50 transition">{loading ? (<span className="flex items-center gap-2"><svg className="animate-spin w-5 h-5" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>Running...</span>) : `Run Performance Benchmarks`}</button>
+                        <button onClick={runQuantumSecurity} disabled={qsLoading} className="bg-purple-600 text-white px-6 py-3 rounded-xl font-medium hover:bg-purple-700 disabled:opacity-50 transition">{qsLoading ? (<span className="flex items-center gap-2"><svg className="animate-spin w-5 h-5" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>Simulating...</span>) : `Quantum Security Simulation`}</button>
+                        <button onClick={runAllSectorQuantumSecurity} disabled={allQsLoading} className="bg-red-600 text-white px-6 py-3 rounded-xl font-medium hover:bg-red-700 disabled:opacity-50 transition">{allQsLoading ? (<span className="flex items-center gap-2"><svg className="animate-spin w-5 h-5" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>Analyzing All...</span>) : `All-Sector Comparison`}</button>
+                        <button onClick={runCircuitBenchmark} disabled={circuitLoading} className="bg-emerald-600 text-white px-6 py-3 rounded-xl font-medium hover:bg-emerald-700 disabled:opacity-50 transition">{circuitLoading ? (<span className="flex items-center gap-2"><svg className="animate-spin w-5 h-5" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>Executing Circuits...</span>) : `Real Quantum Circuit Benchmark`}</button>
+                        <button onClick={runAllSectorCircuit} disabled={allCircuitLoading} className="bg-cyan-600 text-white px-6 py-3 rounded-xl font-medium hover:bg-cyan-700 disabled:opacity-50 transition">{allCircuitLoading ? (<span className="flex items-center gap-2"><svg className="animate-spin w-5 h-5" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>All Sectors...</span>) : `All-Sector Circuit Comparison`}</button>
+                    </div>
+
+                    {/* Performance Benchmark Results */}
                     {results && results.results && (
                         <div className="bg-white border rounded-xl p-6">
                             <h4 className="text-lg font-bold mb-4">{results.sector?.charAt(0).toUpperCase() + results.sector?.slice(1)} Benchmark Results</h4>
@@ -1820,6 +1878,450 @@
                                     <div className="bg-green-50 p-3 rounded"><p className="text-xs text-gray-500">Fastest</p><p className="font-bold text-sm">{results.summary.fastest_ms}ms</p><p className="text-xs text-gray-400">{results.summary.fastest_operation}</p></div>
                                     <div className="bg-orange-50 p-3 rounded"><p className="text-xs text-gray-500">Slowest</p><p className="font-bold text-sm">{results.summary.slowest_ms}ms</p><p className="text-xs text-gray-400">{results.summary.slowest_operation}</p></div>
                                     <div className="bg-purple-50 p-3 rounded"><p className="text-xs text-gray-500">Algorithms</p><p className="font-bold text-sm">{results.summary.algorithms_tested?.join(', ')}</p></div>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {/* Quantum Security Simulation Results */}
+                    {qsResults && (
+                        <div className="space-y-4">
+                            <div className="bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-200 rounded-xl p-6">
+                                <h4 className="text-lg font-bold text-purple-900 mb-1">Quantum Security Simulation: {qsResults.sector_profile?.name}</h4>
+                                <p className="text-sm text-purple-700 mb-4">{qsResults.sector_profile?.key_concern}</p>
+
+                                {/* Migration Urgency Gauge */}
+                                {qsResults.migration_urgency && (
+                                    <div className="bg-white rounded-lg p-4 mb-4">
+                                        <div className="flex items-center justify-between mb-2">
+                                            <span className="font-bold text-gray-700">Migration Urgency Score</span>
+                                            <span className={`text-2xl font-bold ${qsResults.migration_urgency.overall_score >= 80 ? 'text-red-600' : qsResults.migration_urgency.overall_score >= 60 ? 'text-orange-600' : qsResults.migration_urgency.overall_score >= 40 ? 'text-yellow-600' : 'text-green-600'}`}>{qsResults.migration_urgency.overall_score}/100</span>
+                                        </div>
+                                        <div className="w-full bg-gray-200 rounded-full h-4">
+                                            <div className={`h-4 rounded-full transition-all ${qsResults.migration_urgency.overall_score >= 80 ? 'bg-red-500' : qsResults.migration_urgency.overall_score >= 60 ? 'bg-orange-500' : qsResults.migration_urgency.overall_score >= 40 ? 'bg-yellow-500' : 'bg-green-500'}`} style={{width: `${qsResults.migration_urgency.overall_score}%`}}></div>
+                                        </div>
+                                        <div className="mt-2 grid grid-cols-5 gap-1 text-xs text-center">
+                                            {Object.entries(qsResults.migration_urgency.component_scores || {}).map(([k, v]) => (
+                                                <div key={k}><div className="font-medium text-gray-600">{k.replace(/_/g, ' ')}</div><div className="font-bold">{v.score}</div></div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Strategy Comparison Table */}
+                                {qsResults.strategy_comparison && (
+                                    <div className="bg-white rounded-lg p-4 mb-4">
+                                        <h5 className="font-bold text-gray-700 mb-3">Migration Strategy Comparison (Shor vs RSA / Hybrid / PQC Primary / PQC Only)</h5>
+                                        <div className="overflow-x-auto">
+                                            <table className="w-full text-xs">
+                                                <thead><tr className="bg-gray-100"><th className="p-2 text-left">Strategy</th><th className="p-2">Shor Resistant</th><th className="p-2">Security (bits)</th><th className="p-2">Threat Year</th><th className="p-2">CNSA 2.0</th><th className="p-2">HNDL Safe</th><th className="p-2">Complexity</th><th className="p-2">Verdict</th></tr></thead>
+                                                <tbody>
+                                                    {qsResults.strategy_comparison.strategies?.map((s, i) => (
+                                                        <tr key={i} className={`${i % 2 === 0 ? 'bg-white' : 'bg-gray-50'} ${s.strategy === qsResults.strategy_comparison.recommended_strategy ? 'ring-2 ring-purple-400' : ''}`}>
+                                                            <td className="p-2 font-medium">{s.name}</td>
+                                                            <td className="p-2 text-center">{s.shor_resistant ? <span className="text-green-600 font-bold">Yes</span> : <span className="text-red-600 font-bold">No</span>}</td>
+                                                            <td className="p-2 text-center font-mono font-bold">{s.effective_security_bits || 0}</td>
+                                                            <td className="p-2 text-center text-xs">{s.threat_year}</td>
+                                                            <td className="p-2 text-center">{s.cnsa_2_0_compliant ? '✅' : '❌'}</td>
+                                                            <td className="p-2 text-center">{s.hndl_protected ? '✅' : '❌'}</td>
+                                                            <td className="p-2 text-center text-xs">{s.deployment_complexity}</td>
+                                                            <td className="p-2 text-xs">{s.verdict}</td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                        {qsResults.strategy_comparison.recommendation_reasoning && (
+                                            <p className="mt-2 text-xs text-purple-700 bg-purple-50 p-2 rounded">Recommended: {qsResults.strategy_comparison.recommendation_reasoning}</p>
+                                        )}
+                                    </div>
+                                )}
+
+                                {/* Grover vs AES */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                                    {qsResults.grover_vs_aes128 && (
+                                        <div className="bg-white rounded-lg p-4">
+                                            <h5 className="font-bold text-gray-700 mb-2">Grover vs AES-128</h5>
+                                            <div className="space-y-1 text-sm">
+                                                <div className="flex justify-between"><span>Classical Security:</span><span className="font-mono font-bold">{qsResults.grover_vs_aes128.classical_security_bits} bits</span></div>
+                                                <div className="flex justify-between"><span>Post-Quantum Security:</span><span className={`font-mono font-bold ${qsResults.grover_vs_aes128.post_quantum_security_bits < 128 ? 'text-red-600' : 'text-green-600'}`}>{qsResults.grover_vs_aes128.post_quantum_security_bits} bits</span></div>
+                                                <div className="flex justify-between"><span>Meets Sector Req:</span><span>{qsResults.grover_vs_aes128.meets_sector_requirement ? '✅' : '❌'}</span></div>
+                                                <div className="flex justify-between"><span>CNSA 2.0:</span><span>{qsResults.grover_vs_aes128.cnsa_2_0_compliant ? '✅' : '❌'}</span></div>
+                                                <p className="text-xs text-gray-500 mt-2">{qsResults.grover_vs_aes128.sector_note}</p>
+                                            </div>
+                                        </div>
+                                    )}
+                                    {qsResults.grover_vs_aes256 && (
+                                        <div className="bg-white rounded-lg p-4">
+                                            <h5 className="font-bold text-gray-700 mb-2">Grover vs AES-256</h5>
+                                            <div className="space-y-1 text-sm">
+                                                <div className="flex justify-between"><span>Classical Security:</span><span className="font-mono font-bold">{qsResults.grover_vs_aes256.classical_security_bits} bits</span></div>
+                                                <div className="flex justify-between"><span>Post-Quantum Security:</span><span className="font-mono font-bold text-green-600">{qsResults.grover_vs_aes256.post_quantum_security_bits} bits</span></div>
+                                                <div className="flex justify-between"><span>Meets Sector Req:</span><span>{qsResults.grover_vs_aes256.meets_sector_requirement ? '✅' : '❌'}</span></div>
+                                                <div className="flex justify-between"><span>CNSA 2.0:</span><span>{qsResults.grover_vs_aes256.cnsa_2_0_compliant ? '✅' : '✅'}</span></div>
+                                                <p className="text-xs text-gray-500 mt-2">{qsResults.grover_vs_aes256.sector_note}</p>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* HNDL Threat Window */}
+                                {qsResults.hndl_analysis && (
+                                    <div className="bg-white rounded-lg p-4 mb-4">
+                                        <h5 className="font-bold text-gray-700 mb-2">HNDL (Harvest-Now-Decrypt-Later) Threat Window</h5>
+                                        <div className="flex items-center gap-3 mb-3">
+                                            <span className="text-sm">Risk Level:</span>
+                                            {riskBadge(qsResults.hndl_analysis.risk_level)}
+                                            <span className="text-sm text-gray-500">Data Retention: {qsResults.hndl_analysis.data_retention_years} years</span>
+                                        </div>
+                                        <div className="grid grid-cols-3 gap-2 text-xs">
+                                            {Object.entries(qsResults.hndl_analysis.scenarios || {}).map(([scenario, data]) => (
+                                                <div key={scenario} className={`p-2 rounded ${data.data_at_risk ? 'bg-red-50 border border-red-200' : 'bg-green-50 border border-green-200'}`}>
+                                                    <div className="font-bold capitalize">{scenario}</div>
+                                                    <div>Q-Day: +{data.years_until_crqc}yr</div>
+                                                    <div className="font-bold">{data.data_at_risk ? `${data.hndl_exposure_years}yr exposed` : 'Safe'}</div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                        <p className="mt-2 text-xs text-gray-600">{qsResults.hndl_analysis.urgency_message}</p>
+                                    </div>
+                                )}
+
+                                {/* Shor vs RSA Detail */}
+                                {qsResults.shor_vs_rsa?.algorithm_assessments?.length > 0 && (
+                                    <div className="bg-white rounded-lg p-4 mb-4">
+                                        <h5 className="font-bold text-gray-700 mb-2">Shor vs Current RSA/ECC Algorithms (4-Generation)</h5>
+                                        <div className="overflow-x-auto">
+                                            <table className="w-full text-xs">
+                                                <thead><tr className="bg-gray-100"><th className="p-2 text-left">Algorithm</th><th className="p-2">Type</th><th className="p-2">Classical (bits)</th><th className="p-2">PQ (bits)</th><th className="p-2">Threat Year</th><th className="p-2">Level</th></tr></thead>
+                                                <tbody>
+                                                    {qsResults.shor_vs_rsa.algorithm_assessments.map((a, i) => (
+                                                        <tr key={i} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                                                            <td className="p-2 font-medium">{a.algorithm}</td>
+                                                            <td className="p-2 text-center">{a.type}</td>
+                                                            <td className="p-2 text-center font-mono">{a.classical_security_bits}</td>
+                                                            <td className="p-2 text-center font-mono text-red-600 font-bold">{a.post_quantum_security_bits}</td>
+                                                            <td className="p-2 text-center font-mono">{a.threat_year}</td>
+                                                            <td className="p-2 text-center">{riskBadge(a.threat_level?.toUpperCase())}</td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* PQC Only Residual Risks */}
+                                {qsResults.shor_vs_pqc_only && (
+                                    <div className="bg-white rounded-lg p-4 mb-4">
+                                        <h5 className="font-bold text-gray-700 mb-2">Full PQC Migration Residual Risk</h5>
+                                        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-2">
+                                            <div className="bg-green-50 p-2 rounded text-xs"><div className="font-bold text-green-700">Shor</div><div>Neutralized</div></div>
+                                            <div className={`p-2 rounded text-xs ${qsResults.shor_vs_pqc_only.lattice_monoculture_risk === 'HIGH' ? 'bg-red-50' : 'bg-yellow-50'}`}><div className="font-bold">Lattice Monoculture</div><div>{qsResults.shor_vs_pqc_only.lattice_monoculture_risk}</div></div>
+                                            <div className="bg-blue-50 p-2 rounded text-xs"><div className="font-bold">PQC Families</div><div>{qsResults.shor_vs_pqc_only.family_count} ({qsResults.shor_vs_pqc_only.pqc_families_deployed?.join(', ')})</div></div>
+                                            <div className={`p-2 rounded text-xs ${qsResults.shor_vs_pqc_only.fhe_specific_risks?.length > 0 ? 'bg-orange-50' : 'bg-green-50'}`}><div className="font-bold">FHE Risks</div><div>{qsResults.shor_vs_pqc_only.fhe_specific_risks?.length || 0}</div></div>
+                                        </div>
+                                        {qsResults.shor_vs_pqc_only.fhe_specific_risks?.map((r, i) => (
+                                            <div key={i} className="text-xs bg-orange-50 p-2 rounded mb-1"><span className="font-bold text-orange-700">[{r.severity}] {r.risk}:</span> {r.detail}</div>
+                                        ))}
+                                    </div>
+                                )}
+
+                                {/* Side-Channel Risk */}
+                                {qsResults.side_channel_risk?.available && (
+                                    <div className="bg-white rounded-lg p-4 mb-4">
+                                        <h5 className="font-bold text-gray-700 mb-2">Side-Channel Risk: {riskBadge(qsResults.side_channel_risk.sector_exposure)}</h5>
+                                        <p className="text-xs text-gray-600 mb-2">{qsResults.side_channel_risk.sector_context}</p>
+                                        <div className="text-xs text-gray-500">Algorithms assessed: {qsResults.side_channel_risk.algorithms_assessed?.join(', ')}</div>
+                                    </div>
+                                )}
+
+                                {/* Recommendations */}
+                                {qsResults.recommendations?.length > 0 && (
+                                    <div className="bg-white rounded-lg p-4">
+                                        <h5 className="font-bold text-gray-700 mb-2">Prioritized Recommendations</h5>
+                                        {qsResults.recommendations.map((r, i) => (
+                                            <div key={i} className="flex gap-2 text-xs mb-2 items-start">
+                                                <span className="bg-purple-600 text-white rounded-full w-5 h-5 flex items-center justify-center flex-shrink-0 text-xs font-bold">{r.priority}</span>
+                                                <div><span className="font-bold text-purple-700">[{r.category}]</span> {r.action} <span className="text-gray-400">Deadline: {r.deadline}</span></div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Real Quantum Circuit Benchmark Results */}
+                    {circuitResults && (
+                        <div className="space-y-4">
+                            <div className="bg-gradient-to-r from-emerald-50 to-cyan-50 border border-emerald-200 rounded-xl p-6">
+                                <h4 className="text-lg font-bold text-emerald-900 mb-1">Real Quantum Circuit Benchmark: {circuitResults.sector_name}</h4>
+                                <div className="flex gap-2 mb-4">
+                                    <span className={`px-3 py-1 rounded text-xs font-medium ${circuitResults.gpu_backend?.gpu_available ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}`}>{circuitResults.gpu_backend?.gpu_available ? `GPU: ${circuitResults.gpu_backend?.gpu_device}` : 'CPU Mode'}</span>
+                                    <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded text-xs font-medium">Circuits: {circuitResults.execution_summary?.circuits_executed}</span>
+                                    <span className="bg-purple-100 text-purple-700 px-3 py-1 rounded text-xs font-medium">{(circuitResults.execution_summary?.total_execution_time_ms / 1000).toFixed(1)}s</span>
+                                    {circuitResults.execution_summary?.sector_risk_assessment && riskBadge(circuitResults.execution_summary.sector_risk_assessment.overall_risk)}
+                                </div>
+
+                                {/* Shor Circuit Results */}
+                                {circuitResults.shor_circuits?.status === 'completed' && (
+                                    <div className="bg-white rounded-lg p-4 mb-4">
+                                        <h5 className="font-bold text-gray-700 mb-3">Shor's Algorithm — Real Circuit Execution</h5>
+                                        <table className="w-full text-xs mb-3">
+                                            <thead><tr className="bg-gray-100"><th className="p-2 text-left">N</th><th className="p-2">Factors</th><th className="p-2">Success</th><th className="p-2">Qubits</th><th className="p-2">Depth</th><th className="p-2">Time (ms)</th></tr></thead>
+                                            <tbody>
+                                                {circuitResults.shor_circuits.demo_circuits?.map((c, i) => (
+                                                    <tr key={i} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                                                        <td className="p-2 font-mono font-bold">{c.N}</td>
+                                                        <td className="p-2 text-center">{c.factors_found?.join(' x ') || '-'}</td>
+                                                        <td className="p-2 text-center">{c.success ? <span className="text-green-600 font-bold">Yes</span> : <span className="text-red-600">No</span>}</td>
+                                                        <td className="p-2 text-center font-mono">{c.num_qubits || '-'}</td>
+                                                        <td className="p-2 text-center font-mono">{c.circuit_depth || '-'}</td>
+                                                        <td className="p-2 text-center font-mono">{typeof c.execution_time_ms === 'number' ? c.execution_time_ms.toFixed(1) : '-'}</td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                        {circuitResults.shor_circuits.extrapolation?.rsa_keys?.length > 0 && (
+                                            <div className="bg-red-50 p-3 rounded text-xs">
+                                                <div className="font-bold text-red-700 mb-1">RSA Key Extrapolation (Sector Keys)</div>
+                                                {circuitResults.shor_circuits.extrapolation.rsa_keys.map((k, i) => (
+                                                    <div key={i} className="mb-1">{k.algorithm}: {k.logical_qubits?.toLocaleString()} logical qubits, Pinnacle ~{k.hours_pinnacle2026}h</div>
+                                                ))}
+                                            </div>
+                                        )}
+                                        {circuitResults.shor_circuits.sector_implications && (
+                                            <p className="mt-2 text-xs text-gray-600">{circuitResults.shor_circuits.sector_implications.message}</p>
+                                        )}
+                                    </div>
+                                )}
+
+                                {/* ECC Discrete Log Results */}
+                                {circuitResults.ecc_dlog_circuits?.status === 'completed' && (
+                                    <div className="bg-white rounded-lg p-4 mb-4">
+                                        <h5 className="font-bold text-gray-700 mb-3">ECC Discrete Log — Quantum Circuit Demo</h5>
+                                        {circuitResults.ecc_dlog_circuits.demo_result && !circuitResults.ecc_dlog_circuits.demo_result.error && (
+                                            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-3">
+                                                <div className="bg-blue-50 p-2 rounded text-xs"><div className="font-bold">Field</div><div>{circuitResults.ecc_dlog_circuits.demo_result.field}</div></div>
+                                                <div className="bg-blue-50 p-2 rounded text-xs"><div className="font-bold">Qubits</div><div>{circuitResults.ecc_dlog_circuits.demo_result.total_qubits}</div></div>
+                                                <div className="bg-blue-50 p-2 rounded text-xs"><div className="font-bold">Depth</div><div>{circuitResults.ecc_dlog_circuits.demo_result.circuit_depth}</div></div>
+                                                <div className="bg-blue-50 p-2 rounded text-xs"><div className="font-bold">Time</div><div>{circuitResults.ecc_dlog_circuits.demo_result.execution_time_ms?.toFixed(1)}ms</div></div>
+                                            </div>
+                                        )}
+                                        {circuitResults.ecc_dlog_circuits.demo_result?.extrapolation && (
+                                            <div className="bg-orange-50 p-3 rounded text-xs">
+                                                <div className="font-bold text-orange-700 mb-1">Curve Extrapolation (Roetteler 2017)</div>
+                                                {Object.entries(circuitResults.ecc_dlog_circuits.demo_result.extrapolation).map(([curve, data]) => (
+                                                    <div key={curve} className="mb-1">{curve}: {data.estimated_qubits?.toLocaleString()} qubits, {data.estimated_toffoli_gates?.toExponential(2)} Toffoli gates, Threat ~{data.threat_year_moderate}</div>
+                                                ))}
+                                            </div>
+                                        )}
+                                        {circuitResults.ecc_dlog_circuits.sector_implications && (
+                                            <p className="mt-2 text-xs text-gray-600">{circuitResults.ecc_dlog_circuits.sector_implications.message}</p>
+                                        )}
+                                    </div>
+                                )}
+
+                                {/* Grover Circuit Results */}
+                                {circuitResults.grover_circuits?.status === 'completed' && (
+                                    <div className="bg-white rounded-lg p-4 mb-4">
+                                        <h5 className="font-bold text-gray-700 mb-3">Grover's Search — Real Circuit Execution</h5>
+                                        <table className="w-full text-xs mb-3">
+                                            <thead><tr className="bg-gray-100"><th className="p-2">Qubits</th><th className="p-2">Space</th><th className="p-2">Success</th><th className="p-2">Target Prob</th><th className="p-2">Speedup</th><th className="p-2">Depth</th><th className="p-2">Time (ms)</th></tr></thead>
+                                            <tbody>
+                                                {circuitResults.grover_circuits.demo_circuits?.map((c, i) => (
+                                                    <tr key={i} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                                                        <td className="p-2 text-center font-mono font-bold">{c.num_qubits}</td>
+                                                        <td className="p-2 text-center font-mono">2^{c.num_qubits}</td>
+                                                        <td className="p-2 text-center">{c.success ? <span className="text-green-600 font-bold">Yes</span> : <span className="text-red-600">No</span>}</td>
+                                                        <td className="p-2 text-center font-mono">{typeof c.target_probability === 'number' ? (c.target_probability > 1 ? c.target_probability.toFixed(1) + '%' : (c.target_probability * 100).toFixed(1) + '%') : '-'}</td>
+                                                        <td className="p-2 text-center font-mono font-bold text-green-700">{c.speedup_factor}x</td>
+                                                        <td className="p-2 text-center font-mono">{c.circuit_depth || '-'}</td>
+                                                        <td className="p-2 text-center font-mono">{typeof c.execution_time_ms === 'number' ? c.execution_time_ms.toFixed(1) : '-'}</td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                        <div className="grid grid-cols-2 gap-3 text-xs">
+                                            {Object.entries(circuitResults.grover_circuits.extrapolation || {}).map(([key, data]) => (
+                                                <div key={key} className={`p-3 rounded ${key === '128' ? 'bg-red-50 border border-red-200' : 'bg-green-50 border border-green-200'}`}>
+                                                    <div className="font-bold mb-1">AES-{key} Extrapolation</div>
+                                                    <div>Qubits: {data.qubits?.toLocaleString()}</div>
+                                                    <div>Effective Security: <span className="font-bold">{data.effective_security_bits} bits</span></div>
+                                                    <div>FDW Reduction: {data.full_depth_width_reduction}</div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Regev vs Shor Comparison */}
+                                {circuitResults.regev_comparison?.comparisons && (
+                                    <div className="bg-white rounded-lg p-4 mb-4">
+                                        <h5 className="font-bold text-gray-700 mb-3">Regev (2023) vs Shor — Resource Comparison</h5>
+                                        <table className="w-full text-xs mb-2">
+                                            <thead><tr className="bg-gray-100"><th className="p-2">Bit Size</th><th className="p-2">Shor Gates</th><th className="p-2">Regev Gates</th><th className="p-2">Gate Ratio</th><th className="p-2">Shor Qubits</th><th className="p-2">Regev Qubits</th><th className="p-2">Advantage</th></tr></thead>
+                                            <tbody>
+                                                {circuitResults.regev_comparison.comparisons.map((c, i) => (
+                                                    <tr key={i} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                                                        <td className="p-2 text-center font-mono font-bold">{c.bit_size}</td>
+                                                        <td className="p-2 text-center font-mono">{c.shor?.gates?.toExponential(1)}</td>
+                                                        <td className="p-2 text-center font-mono">{c.regev?.gates?.toExponential(1)}</td>
+                                                        <td className="p-2 text-center font-mono">{c.gate_ratio}</td>
+                                                        <td className="p-2 text-center font-mono">{c.shor?.qubits?.toLocaleString()}</td>
+                                                        <td className="p-2 text-center font-mono">{c.regev?.qubits?.toLocaleString()}</td>
+                                                        <td className="p-2 text-center font-bold">{c.advantage}</td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                        <p className="text-xs text-gray-500">{circuitResults.regev_comparison.summary?.practical_status_2026}</p>
+                                    </div>
+                                )}
+
+                                {/* Noise Analysis */}
+                                {circuitResults.noise_analysis?.status === 'completed' && (
+                                    <div className="bg-white rounded-lg p-4 mb-4">
+                                        <h5 className="font-bold text-gray-700 mb-3">Sector Noise Profile Analysis</h5>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                            {['grover_under_noise', 'qft_under_noise'].map(key => {
+                                                const d = circuitResults.noise_analysis[key];
+                                                if (!d) return null;
+                                                return (
+                                                    <div key={key} className="bg-gray-50 p-3 rounded text-xs">
+                                                        <div className="font-bold mb-2">{d.circuit_type?.toUpperCase()} ({d.num_qubits}q) — {d.noise_profile} noise</div>
+                                                        <div className="space-y-1">
+                                                            <div className="flex justify-between"><span>Ideal Probability:</span><span className="font-mono font-bold">{(d.ideal_success_probability * 100).toFixed(1)}%</span></div>
+                                                            <div className="flex justify-between"><span>Noisy Probability:</span><span className={`font-mono font-bold ${d.fidelity_ratio < 0.5 ? 'text-red-600' : d.fidelity_ratio < 0.8 ? 'text-orange-600' : 'text-green-600'}`}>{(d.sector_noise_probability * 100).toFixed(1)}%</span></div>
+                                                            <div className="flex justify-between"><span>Fidelity:</span><span className="font-mono">{(d.fidelity_ratio * 100).toFixed(1)}%</span></div>
+                                                            <div className="flex justify-between"><span>Degradation:</span><span className="font-mono">{d.degradation_pct}%</span></div>
+                                                        </div>
+                                                        {d.assessment && <p className="mt-2 text-gray-500">{d.assessment.description}</p>}
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* HNDL Simulation */}
+                                {circuitResults.hndl_simulation && (
+                                    <div className="bg-white rounded-lg p-4 mb-4">
+                                        <h5 className="font-bold text-gray-700 mb-2">HNDL Circuit Demonstration</h5>
+                                        <div className="flex items-center gap-3 mb-3">
+                                            <span className="text-sm">Risk:</span>{riskBadge(circuitResults.hndl_simulation.hndl_risk)}
+                                            <span className="text-xs text-gray-500">Window: {circuitResults.hndl_simulation.hndl_window_years} years</span>
+                                            <span className="text-xs text-gray-500">Q-Day: ~{circuitResults.hndl_simulation.q_day_estimate}</span>
+                                        </div>
+                                        <div className="space-y-1 text-xs">
+                                            {circuitResults.hndl_simulation.attack_sequence?.map((step, i) => (
+                                                <div key={i} className={`p-2 rounded ${i === 3 ? 'bg-red-50 font-bold text-red-700' : 'bg-gray-50'}`}>{step}</div>
+                                            ))}
+                                        </div>
+                                        {circuitResults.hndl_simulation.shor_proof_of_concept && (
+                                            <div className="mt-2 bg-green-50 p-2 rounded text-xs">
+                                                Shor PoC: N={circuitResults.hndl_simulation.shor_proof_of_concept.N} factored in {circuitResults.hndl_simulation.shor_proof_of_concept.execution_time_ms?.toFixed(1)}ms using {circuitResults.hndl_simulation.shor_proof_of_concept.qubits_used} qubits
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+
+                                {/* Overall Assessment */}
+                                {circuitResults.execution_summary?.sector_risk_assessment && (
+                                    <div className={`rounded-lg p-4 ${circuitResults.execution_summary.sector_risk_assessment.overall_risk === 'CRITICAL' ? 'bg-red-100 border border-red-300' : circuitResults.execution_summary.sector_risk_assessment.overall_risk === 'HIGH' ? 'bg-orange-100 border border-orange-300' : 'bg-yellow-100 border border-yellow-300'}`}>
+                                        <div className="flex items-center gap-2 mb-2">
+                                            <span className="font-bold">Overall Circuit Benchmark Assessment:</span>
+                                            {riskBadge(circuitResults.execution_summary.sector_risk_assessment.overall_risk)}
+                                        </div>
+                                        <p className="text-xs">{circuitResults.execution_summary.sector_risk_assessment.recommendation}</p>
+                                        {circuitResults.execution_summary.sector_risk_assessment.risk_factors?.length > 0 && (
+                                            <ul className="mt-2 text-xs list-disc list-inside">
+                                                {circuitResults.execution_summary.sector_risk_assessment.risk_factors.map((f, i) => <li key={i}>{f}</li>)}
+                                            </ul>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* All-Sector Circuit Comparison */}
+                    {allCircuit && allCircuit.sectors && (
+                        <div className="bg-gradient-to-r from-cyan-50 to-teal-50 border border-cyan-200 rounded-xl p-6">
+                            <h4 className="text-lg font-bold text-cyan-900 mb-4">All-Sector Real Circuit Benchmark Comparison</h4>
+                            <div className="flex gap-2 mb-4">
+                                <span className="bg-cyan-100 text-cyan-700 px-3 py-1 rounded text-xs font-medium">Total Circuits: {allCircuit.cross_sector_comparison?.total_circuits_executed}</span>
+                                <span className="bg-purple-100 text-purple-700 px-3 py-1 rounded text-xs font-medium">{(allCircuit.total_execution_time_ms / 1000).toFixed(1)}s</span>
+                            </div>
+                            {allCircuit.cross_sector_comparison?.risk_ranking && (
+                                <div className="bg-white rounded-lg p-4 mb-4">
+                                    <h5 className="font-bold text-gray-700 mb-3">Circuit-Verified Risk Ranking</h5>
+                                    {allCircuit.cross_sector_comparison.risk_ranking.map((r, i) => (
+                                        <div key={i} className="flex items-center gap-3 mb-2">
+                                            <span className="font-bold text-lg w-6">{i + 1}.</span>
+                                            <span className="font-medium w-28">{r.sector}</span>
+                                            {riskBadge(r.overall_risk)}
+                                            <span className="text-xs text-gray-500">HNDL: {r.hndl_risk} ({r.hndl_window}yr)</span>
+                                            <span className="text-xs text-gray-400">Circuits: {r.circuits_executed}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                                {Object.entries(allCircuit.sectors).filter(([_, v]) => !v.error).map(([sect, data]) => (
+                                    <div key={sect} className="bg-white rounded-lg p-3 border">
+                                        <h6 className="font-bold text-sm mb-2">{data.sector_name || sect}</h6>
+                                        <div className="space-y-1 text-xs">
+                                            <div className="flex justify-between"><span>Overall:</span>{riskBadge(data.execution_summary?.sector_risk_assessment?.overall_risk)}</div>
+                                            <div className="flex justify-between"><span>Circuits:</span><span>{data.execution_summary?.circuits_executed}</span></div>
+                                            <div className="flex justify-between"><span>HNDL:</span>{riskBadge(data.hndl_simulation?.hndl_risk)}</div>
+                                            <div className="flex justify-between"><span>Shor Demo:</span><span>{data.shor_circuits?.demo_circuits?.filter(c => c.success).length}/{data.shor_circuits?.demo_circuits?.length}</span></div>
+                                            <div className="flex justify-between"><span>Time:</span><span>{(data.execution_summary?.total_execution_time_ms / 1000).toFixed(1)}s</span></div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* All-Sector Comparison */}
+                    {allQs && allQs.sectors && (
+                        <div className="bg-gradient-to-r from-red-50 to-orange-50 border border-red-200 rounded-xl p-6">
+                            <h4 className="text-lg font-bold text-red-900 mb-4">All-Sector Quantum Security Comparison</h4>
+                            {allQs.cross_sector_comparison?.migration_urgency_ranking && (
+                                <div className="bg-white rounded-lg p-4 mb-4">
+                                    <h5 className="font-bold text-gray-700 mb-3">Migration Urgency Ranking</h5>
+                                    {allQs.cross_sector_comparison.migration_urgency_ranking.map((r, i) => (
+                                        <div key={i} className="flex items-center gap-3 mb-2">
+                                            <span className="font-bold text-lg w-6">{i + 1}.</span>
+                                            <span className="font-medium w-32">{r.sector}</span>
+                                            <div className="flex-1 bg-gray-200 rounded-full h-4">
+                                                <div className={`h-4 rounded-full ${r.urgency_score >= 80 ? 'bg-red-500' : r.urgency_score >= 60 ? 'bg-orange-500' : r.urgency_score >= 40 ? 'bg-yellow-500' : 'bg-green-500'}`} style={{width: `${r.urgency_score}%`}}></div>
+                                            </div>
+                                            <span className={`font-bold w-12 text-right ${r.urgency_score >= 80 ? 'text-red-600' : r.urgency_score >= 60 ? 'text-orange-600' : 'text-green-600'}`}>{r.urgency_score}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                                {Object.entries(allQs.sectors).filter(([_, v]) => !v.error).map(([sector, data]) => (
+                                    <div key={sector} className="bg-white rounded-lg p-3 border">
+                                        <h6 className="font-bold text-sm mb-2">{data.sector_profile?.name || sector}</h6>
+                                        <div className="space-y-1 text-xs">
+                                            <div className="flex justify-between"><span>Urgency:</span>{riskBadge(data.migration_urgency?.urgency_level)}</div>
+                                            <div className="flex justify-between"><span>HNDL:</span>{riskBadge(data.hndl_analysis?.risk_level)}</div>
+                                            <div className="flex justify-between"><span>Side-Channel:</span>{riskBadge(data.side_channel_risk?.sector_exposure)}</div>
+                                            <div className="flex justify-between"><span>Compliance:</span><span>{data.sector_profile?.compliance_deadline_year}</span></div>
+                                            <div className="flex justify-between"><span>Data Retention:</span><span>{data.sector_profile?.data_retention_years}yr</span></div>
+                                            <div className="flex justify-between"><span>Recommended:</span><span className="font-bold text-purple-700">{data.strategy_comparison?.recommended_strategy}</span></div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                            {allQs.cross_sector_comparison?.hndl_critical_sectors?.length > 0 && (
+                                <div className="mt-3 bg-red-100 border border-red-300 rounded p-3 text-xs text-red-800">
+                                    <span className="font-bold">HNDL Critical Sectors:</span> {allQs.cross_sector_comparison.hndl_critical_sectors.join(', ')} — Immediate PQC migration required to protect long-retention data.
                                 </div>
                             )}
                         </div>
