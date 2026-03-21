@@ -69,7 +69,16 @@ Production-ready framework combining **Post-Quantum Cryptography (PQC)** with **
 - **HNDL circuit demonstration**: Shor proof-of-concept attack sequence
 - **Quantum Security Infographic**: Standalone HTML with CSS animations (`docs/infographic.html`)
 
-### 22 New API Endpoints (total)
+### Qiskit Pass Manager Circuit Optimization (NEW)
+- **`generate_preset_pass_manager()`** replaces `transpile()` per IBM Quantum Learning recommendations
+- **Shor circuits**: `optimization_level=2` (IBM Quantum Learning Shor's algorithm recommendation)
+- **Grover circuits**: `optimization_level=3` (IBM Quantum Learning Grover's algorithm — deep circuits)
+- **ECC/Noise circuits**: `optimization_level=2` with standard basis gate set
+- **optimization_info**: Original vs optimized gate count/depth with reduction percentage in all results
+- **Circuit visualization**: `generate_circuit_diagram()` renders Qiskit circuits as base64 PNG diagrams
+- **WebUI diagrams**: Shor N=15, Grover 4-qubit, ECC GF(2^4) circuit diagrams displayed after benchmark
+
+### 25 New API Endpoints (total)
 - `GET /quantum/shor-resources/multi-era` - 4-generation Shor resource comparison
 - `POST /quantum/simulate/noisy` - Noise-aware quantum simulation
 - `GET /security/side-channel/{algorithm}` - Per-algorithm side-channel assessment
@@ -87,6 +96,9 @@ Production-ready framework combining **Post-Quantum Cryptography (PQC)** with **
 - `POST /quantum/circuit/grover-demo` - Grover search real circuit demo
 - `GET /quantum/circuit/regev-comparison` - Regev vs Shor resource comparison
 - `GET /quantum/circuit/gpu-status` - GPU/CPU quantum simulation backend status
+- `GET /quantum/circuit/shor-diagram` - Shor circuit diagram (base64 PNG)
+- `GET /quantum/circuit/grover-diagram` - Grover circuit diagram (base64 PNG)
+- `GET /quantum/circuit/ecc-diagram` - ECC discrete log circuit diagram (base64 PNG)
 
 ### Dynamic Version Management (NEW)
 - Centralized `version.json` configuration for all module versions
@@ -176,9 +188,12 @@ Production-ready framework combining **Post-Quantum Cryptography (PQC)** with **
 - **JVG Algorithm (Mar 2026)**: DISMISSED — no valid quantum speedup demonstrated.
 
 #### Browser-Verified (March 2026)
-- **151 tests** all passing (Python 3.12.11, Qiskit 2.3.1, Aer 0.17.2)
-- Healthcare (5), Finance (5), IoT (10), Blockchain (5), MPC-FHE (9) benchmarks verified
-- Shor N=15/143/221, Grover 4-qubit (96.6%), NIST 9 algorithms, Noise simulation all verified in browser
+- **178 tests** all passing (Python 3.12.11, Qiskit 2.3.1, Aer 0.17.2)
+- Healthcare (7), Finance (8), IoT (6), Blockchain (7), MPC-FHE (7) circuit benchmarks — all **🟢 GPU accelerated**
+- Shor N=15/21/35/143/221, Grover 4-16 qubit, ECC GF(2^4) — all on `AerSimulator(device='GPU')`
+- **GPU backend**: NVIDIA RTX PRO 6000 Blackwell 96GB via cuStateVec — ~25% speedup (Healthcare: 119.9s→89.5s)
+- Pass Manager: Shor level=2, Grover level=3, ECC/Noise level=2 (`generate_preset_pass_manager`)
+- Circuit diagrams: Shor, Grover, ECC rendered as base64 PNG via matplotlib
 - Side-channel: ML-KEM CRITICAL, ML-DSA HIGH, SLH-DSA LOW, CKKS-FHE CRITICAL, GL-FHE HIGH
 
 ## What's New in v3.1.0
@@ -284,10 +299,13 @@ Production-ready framework combining **Post-Quantum Cryptography (PQC)** with **
 | Post-Quantum Signatures | ML-DSA-44/65/87 (FIPS 204) | Production |
 | Hybrid Key Exchange | X25519 + ML-KEM-768 | Production |
 | Homomorphic Encryption | CKKS (DESILO FHE) | Production |
+| Quantum Circuit Benchmarks | Shor/Grover/ECC on AerSimulator GPU | **v3.2.0** |
+| Qiskit Pass Manager | Level 2/3 circuit optimization | **v3.2.0** |
+| Circuit Visualization | matplotlib PNG diagrams via API | **v3.2.0** |
 | Quantum Threat Simulation | Shor + Grover Estimators | **v3.0.0** |
 | Security Scoring | NIST IR 8547 Compliance | **v3.0.0** |
 | MPC-HE Inference | 2-Party DESILO Multiparty | **v3.0.0** |
-| GPU Acceleration | CUDA 13.0 / RTX 6000 PRO | **v3.0.0** |
+| GPU Acceleration | cuStateVec / RTX 6000 PRO Blackwell 96GB | **v3.2.0** |
 | Kubernetes Deployment | Helm Chart | Production |
 | Monitoring | Prometheus + Grafana | Production |
 
@@ -538,6 +556,21 @@ python -m uvicorn api.server:app
 | `/quantum/shor-resources/multi-era` | GET | 4-generation Shor resource comparison |
 | `/quantum/simulate/noisy` | POST | Noise-aware quantum simulation |
 
+### Quantum Circuit Benchmarks (v3.2.0)
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/benchmarks/sector/{sector}/circuit-benchmark` | POST | Per-sector Qiskit circuit benchmark (Shor+Grover+ECC, GPU) |
+| `/benchmarks/sector-all/circuit-benchmark` | POST | All 5 sectors circuit comparison |
+| `/quantum/circuit/shor-demo` | POST | Shor factoring real circuit demo |
+| `/quantum/circuit/grover-demo` | POST | Grover search real circuit demo |
+| `/quantum/circuit/ecc-dlog-demo` | POST | ECC discrete log circuit demo |
+| `/quantum/circuit/regev-comparison` | GET | Regev vs Shor resource comparison |
+| `/quantum/circuit/gpu-status` | GET | GPU/CPU quantum simulation backend status |
+| `/quantum/circuit/shor-diagram` | GET | Shor circuit diagram (base64 PNG) |
+| `/quantum/circuit/grover-diagram` | GET | Grover circuit diagram (base64 PNG) |
+| `/quantum/circuit/ecc-diagram` | GET | ECC discrete log circuit diagram (base64 PNG) |
+
 ### Side-Channel & Sector Benchmarks (v3.1.0 + v3.2.0)
 
 | Endpoint | Method | Description |
@@ -564,7 +597,8 @@ pqc_fhe_benckmark/
 │   ├── pqc_simulator.py       # ML-KEM/ML-DSA educational simulator
 │   ├── desilo_fhe_engine.py   # DESILO FHE CKKS engine
 │   ├── quantum_threat_simulator.py  # [v3.0.0] Shor/Grover estimator
-│   ├── quantum_verification.py     # [v3.1.0] Qiskit circuit verification + noise sim
+│   ├── quantum_verification.py     # [v3.1.0] Qiskit circuit verification + noise sim (GPU)
+│   ├── sector_quantum_circuit_benchmark.py  # [v3.2.0] Sector circuit benchmarks, ECC, noise, diagrams (GPU)
 │   ├── security_scoring.py    # [v3.0.0] NIST IR 8547 scoring
 │   ├── sector_benchmarks.py   # [v3.1.0] Sector-specific benchmarks
 │   ├── side_channel_assessment.py   # [v3.2.0] Side-channel risk assessment
@@ -573,7 +607,7 @@ pqc_fhe_benckmark/
 ├── benchmarks/
 │   └── __init__.py            # Performance benchmarks (incl. GPU)
 ├── tests/
-│   └── test_pqc_fhe.py        # 151 tests (v3.2.0)
+│   └── test_pqc_fhe.py        # 178 tests (v3.2.0)
 ├── kubernetes/
 │   └── helm/pqc-fhe/          # Helm chart
 ├── monitoring/
@@ -594,9 +628,10 @@ pqc_fhe_benckmark/
 | OS | Alma Linux 9.7 |
 | CPU | Intel Core i5-13600K |
 | RAM | 128GB DDR5 5200 |
-| GPU | NVIDIA RTX 6000 PRO Blackwell 96GB |
-| Python | 3.12 |
-| CUDA | 13.0 |
+| GPU | NVIDIA RTX PRO 6000 Blackwell 96GB (cuStateVec) |
+| Python | 3.12.11 |
+| CUDA Driver | 580.105.08 |
+| Qiskit | 2.3.1 + Aer 0.17.2 (GPU) |
 
 ## Requirements
 
@@ -604,6 +639,9 @@ pqc_fhe_benckmark/
 - liboqs-python (build from source, liboqs 0.15.0)
 - cryptography >= 41.0 (for X25519 hybrid)
 - desilofhe / desilofhe-cu130 (FHE, optional for GPU)
+- qiskit >= 2.3.1, qiskit-aer >= 0.17.2 (circuit benchmarks)
+- qiskit-aer-gpu-cu11 (optional, GPU acceleration via cuStateVec)
+- pylatexenc (circuit diagram rendering)
 - numpy >= 1.21
 - fastapi >= 0.100, uvicorn >= 0.23
 - Kubernetes 1.24+ (for Helm deployment)
@@ -640,14 +678,20 @@ pqc_fhe_benckmark/
 ## Version History
 
 ### v3.2.0 (2026-03-19)
+- **GPU acceleration**: All circuit verifiers use `AerSimulator(device='GPU')` with CPU fallback (~25% speedup)
+- **Qiskit Pass Manager**: `generate_preset_pass_manager()` replaces `transpile()` (Shor level=2, Grover level=3)
+- **Circuit visualization**: `generate_circuit_diagram()` renders Shor/Grover/ECC circuits as base64 PNG
+- **WebUI GPU indicators**: 🟢 GPU / CPU device display for all circuit results
 - BKZ/Core-SVP accuracy fixes (NIST reference lookup table, CBD sigma, sieve constant 0.257)
 - Multi-era Shor resource estimation (20M → 100K physical qubits, 4 generations)
+- Extended factorizations: N=143 (11×13), N=221 (13×17) with 24-qubit circuits
 - Side-channel risk assessment: ML-KEM critical (SPA+EM), CKKS-FHE critical (NTT neural network 98.6%)
 - Noise-aware quantum simulation (depolarizing error channels)
 - CKKS/FHE Ring-LWE security verification against HE Standard bounds
 - Dynamic version management via `version.json` (eliminates hardcoded version strings)
 - IBM quantum roadmap update: Kookaburra 4,158 qubits, qLDPC real-time decoding
-- 13 new API endpoints, 151 tests (up from 88), 50+ academic references
+- Bug fixes: Shor trivial GCD UnboundLocalError, WebUI sector switch clearing, null safety
+- 25 API endpoints, 178 tests (up from 88), 60+ academic references
 
 ### v3.1.0 (2026-03-18)
 - Quantum circuit verification via Qiskit AerSimulator (Shor/Grover/NIST levels)

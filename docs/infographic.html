@@ -63,11 +63,11 @@ td{padding:0.4rem 0.5rem;text-align:center;border-bottom:1px solid rgba(71,85,10
             <div class="stat-label">Industry Sectors</div>
         </div>
         <div class="card" style="text-align:center">
-            <div class="stat-number text-purple">22</div>
+            <div class="stat-number text-purple">25</div>
             <div class="stat-label">API Endpoints</div>
         </div>
         <div class="card" style="text-align:center">
-            <div class="stat-number text-green">173</div>
+            <div class="stat-number text-green">178</div>
             <div class="stat-label">Tests Passing</div>
         </div>
         <div class="card" style="text-align:center">
@@ -208,21 +208,23 @@ td{padding:0.4rem 0.5rem;text-align:center;border-bottom:1px solid rgba(71,85,10
     <div class="section-title">4. Real Quantum Circuit Benchmark Results</div>
     <div class="grid grid-3">
         <div class="card">
-            <h3>Shor Factoring (Qiskit AerSimulator)</h3>
+            <h3>Shor Factoring (AerSimulator 🟢 GPU)</h3>
             <table>
-                <thead><tr><th>N</th><th>Factors</th><th>Qubits</th><th>Status</th></tr></thead>
+                <thead><tr><th>N</th><th>Factors</th><th>Qubits</th><th>Device</th><th>Status</th></tr></thead>
                 <tbody>
-                    <tr><td class="mono">15</td><td>3 × 5</td><td class="mono">12</td><td class="text-green">Success</td></tr>
-                    <tr><td class="mono">21</td><td>3 × 7</td><td class="mono">15</td><td class="text-green">Success</td></tr>
-                    <tr><td class="mono">35</td><td>5 × 7</td><td class="mono">18</td><td class="text-green">Success</td></tr>
+                    <tr><td class="mono">15</td><td>3 × 5</td><td class="mono">12</td><td class="text-green">GPU</td><td class="text-green">Success</td></tr>
+                    <tr><td class="mono">21</td><td>3 × 7</td><td class="mono">15</td><td class="text-green">GPU</td><td class="text-green">Success</td></tr>
+                    <tr><td class="mono">35</td><td>5 × 7</td><td class="mono">18</td><td class="text-green">GPU</td><td class="text-green">Success</td></tr>
+                    <tr><td class="mono">143</td><td>11 × 13</td><td class="mono">24</td><td class="text-green">GPU</td><td class="text-green">Success</td></tr>
+                    <tr><td class="mono">221</td><td>13 × 17</td><td class="mono">24</td><td class="text-green">GPU</td><td class="text-green">Success</td></tr>
                 </tbody>
             </table>
             <div style="font-size:0.75rem;color:#94a3b8;margin-top:0.5rem">
-                Real QFT-based period finding. Extrapolates to RSA-2048 (4,098 qubits).
+                Real QFT-based period finding on cuStateVec GPU. Pass Manager level=2. Extrapolates to RSA-2048 (4,098 qubits).
             </div>
         </div>
         <div class="card">
-            <h3>ECC Discrete Log (GF(2<sup>4</sup>))</h3>
+            <h3>ECC Discrete Log (GF(2<sup>4</sup>) 🟢 GPU)</h3>
             <table>
                 <thead><tr><th>Curve</th><th>Qubits</th><th>Toffoli</th><th>Threat</th></tr></thead>
                 <tbody>
@@ -237,19 +239,49 @@ td{padding:0.4rem 0.5rem;text-align:center;border-bottom:1px solid rgba(71,85,10
             </div>
         </div>
         <div class="card">
-            <h3>Grover Search (Qiskit AerSimulator)</h3>
+            <h3>Grover Search (AerSimulator 🟢 GPU)</h3>
             <table>
-                <thead><tr><th>Qubits</th><th>Space</th><th>Speedup</th></tr></thead>
+                <thead><tr><th>Qubits</th><th>Space</th><th>Device</th><th>Speedup</th></tr></thead>
                 <tbody>
-                    <tr><td class="mono">4</td><td>16</td><td class="mono text-green">~31x</td></tr>
-                    <tr><td class="mono">8</td><td>256</td><td class="mono text-green">~256x</td></tr>
-                    <tr><td class="mono">12</td><td>4,096</td><td class="mono text-green">~4,096x</td></tr>
-                    <tr><td class="mono">16</td><td>65,536</td><td class="mono text-green">~65,536x</td></tr>
+                    <tr><td class="mono">4</td><td>16</td><td class="text-green">GPU</td><td class="mono text-green">~31x</td></tr>
+                    <tr><td class="mono">8</td><td>256</td><td class="text-green">GPU</td><td class="mono text-green">~256x</td></tr>
+                    <tr><td class="mono">12</td><td>4,096</td><td class="text-green">GPU</td><td class="mono text-green">~4,096x</td></tr>
+                    <tr><td class="mono">16</td><td>65,536</td><td class="text-green">GPU</td><td class="mono text-green">~65,536x</td></tr>
                 </tbody>
             </table>
             <div style="font-size:0.75rem;color:#94a3b8;margin-top:0.5rem">
-                Quadratic speedup demonstrated. AES-128: 64-bit effective security.
+                Quadratic speedup demonstrated on cuStateVec GPU. Pass Manager level=3. AES-128: 64-bit effective security.
             </div>
+        </div>
+    </div>
+
+    <!-- Section 4.1: Pass Manager Optimization -->
+    <div class="card" style="margin-top:1rem;background:linear-gradient(135deg,#1e293b,#334155);color:white;padding:1.5rem;border-radius:1rem;">
+        <h3 style="color:#67e8f9;margin-bottom:1rem;">Qiskit Pass Manager + GPU Acceleration (IBM Quantum Learning)</h3>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;text-align:center;">
+            <div style="background:rgba(255,255,255,0.1);padding:1rem;border-radius:0.5rem;">
+                <div style="font-size:2rem;font-weight:bold;color:#34d399;">Level 2</div>
+                <div style="font-size:0.8rem;color:#94a3b8;">Shor + ECC + Noise</div>
+                <div style="font-size:0.7rem;color:#64748b;margin-top:0.25rem;">generate_preset_pass_manager</div>
+            </div>
+            <div style="background:rgba(255,255,255,0.1);padding:1rem;border-radius:0.5rem;">
+                <div style="font-size:2rem;font-weight:bold;color:#a78bfa;">Level 3</div>
+                <div style="font-size:0.8rem;color:#94a3b8;">Grover (deep circuits)</div>
+                <div style="font-size:0.7rem;color:#64748b;margin-top:0.25rem;">generate_preset_pass_manager</div>
+            </div>
+            <div style="background:rgba(255,255,255,0.1);padding:1rem;border-radius:0.5rem;">
+                <div style="font-size:2rem;font-weight:bold;color:#fbbf24;">5</div>
+                <div style="font-size:0.8rem;color:#94a3b8;">Basis Gates</div>
+                <div style="font-size:0.7rem;color:#64748b;margin-top:0.25rem;">cx, id, rz, sx, x</div>
+            </div>
+            <div style="background:rgba(34,197,94,0.2);padding:1rem;border-radius:0.5rem;border:1px solid rgba(34,197,94,0.4);">
+                <div style="font-size:2rem;font-weight:bold;color:#4ade80;">GPU</div>
+                <div style="font-size:0.8rem;color:#94a3b8;">cuStateVec ~25% faster</div>
+                <div style="font-size:0.7rem;color:#64748b;margin-top:0.25rem;">RTX PRO 6000 96GB</div>
+            </div>
+        </div>
+        <div style="font-size:0.75rem;color:#94a3b8;margin-top:0.75rem;text-align:center;">
+            All 5 verifier classes use AerSimulator(device='GPU') with CPU fallback. Circuit diagrams via matplotlib base64 PNG API.
         </div>
     </div>
 
@@ -328,9 +360,9 @@ td{padding:0.4rem 0.5rem;text-align:center;border-bottom:1px solid rgba(71,85,10
 
     <!-- Footer -->
     <div class="footer">
-        <p>PQC-FHE Integration Platform v3.2.0 | Real Qiskit Circuit Benchmarks | GPU-Accelerated (RTX 6000 PRO)</p>
-        <p style="margin-top:0.5rem">References: NIST IR 8547, CNSA 2.0, Gidney 2025, Pinnacle 2026, Regev JACM 2025, CCQC 2025, Penn State 2026</p>
-        <p style="margin-top:0.25rem;font-size:0.7rem">Generated: March 2026 | Qiskit v2.3.1 + Aer v0.17.2</p>
+        <p>PQC-FHE Integration Platform v3.2.0 | Real Qiskit Circuit Benchmarks | GPU-Accelerated (RTX PRO 6000 Blackwell 96GB cuStateVec)</p>
+        <p style="margin-top:0.5rem">References: NIST IR 8547, CNSA 2.0, Gidney 2025, Pinnacle 2026, Regev JACM 2025, IBM Quantum Learning</p>
+        <p style="margin-top:0.25rem;font-size:0.7rem">Generated: March 2026 | Qiskit v2.3.1 + Aer v0.17.2 (GPU) | 178 Tests | Pass Manager Level 2/3</p>
     </div>
 </div>
 </body>
