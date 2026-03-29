@@ -32,7 +32,7 @@ References:
 
 Author: PQC-FHE Integration Library
 License: MIT
-Version: 3.2.0
+Version: 3.5.0
 """
 
 import math
@@ -1659,6 +1659,20 @@ class NoiseAwareQuantumSimulator:
             basis_gates=['cx', 'id', 'rz', 'sx', 'x']
         )
 
+    def _get_pass_manager_for_backend(self, backend_name: str = 'ibm_fez'):
+        """Get a pass manager with basis_gates appropriate for the given backend."""
+        try:
+            from src.ibm_quantum_backend import get_ibm_manager
+            mgr = get_ibm_manager()
+            params = mgr.get_noise_params(backend_name)
+            basis_gates = params.get('basis_gates', ['cx', 'id', 'rz', 'sx', 'x'])
+        except Exception:
+            basis_gates = ['cx', 'id', 'rz', 'sx', 'x']
+        return generate_preset_pass_manager(
+            optimization_level=2,
+            basis_gates=basis_gates,
+        )
+
     def compare_ideal_vs_noisy(
         self,
         circuit_type: str = 'grover',
@@ -1781,6 +1795,85 @@ class NoiseAwareQuantumSimulator:
                 if threshold_rate else
                 f'{algorithm} with {num_qubits} qubits is robust to all tested error rates.'
             ),
+        }
+
+    def compare_with_ibm_noise(
+        self,
+        circuit_type: str = 'grover',
+        num_qubits: int = 4,
+        backend_name: str = 'ibm_fez',
+    ) -> Dict[str, Any]:
+        """
+        Compare ideal vs depolarizing vs IBM QPU noise model execution.
+
+        Provides three-way comparison:
+        1. Ideal (noiseless) execution
+        2. Standard depolarizing noise (DEFAULT_ERROR_RATES)
+        3. IBM QPU realistic noise model (from IBMQuantumBackendManager)
+
+        Args:
+            circuit_type: 'grover' or 'qft'
+            num_qubits: Number of qubits (3-10)
+            backend_name: IBM Quantum backend name
+
+        Returns:
+            Dict with three-way comparison results
+        """
+        # 1) Run standard ideal vs noisy comparison
+        standard_result = self.compare_ideal_vs_noisy(circuit_type, num_qubits)
+
+        # 2) Get IBM QPU noise model
+        ibm_result = {}
+        try:
+            from src.ibm_quantum_backend import get_ibm_manager
+            ibm_mgr = get_ibm_manager()
+            noise_model = ibm_mgr.build_noise_model(backend_name)
+            noise_params = ibm_mgr.get_noise_params(backend_name)
+
+            if noise_model:
+                # Build the circuit
+                num_qubits = max(3, min(num_qubits, 10))
+                if circuit_type == 'grover':
+                    qc, target = self._build_grover_circuit(num_qubits)
+                else:
+                    qc, target = self._build_qft_circuit(num_qubits)
+
+                # Use backend-specific pass manager for correct basis_gates
+                ibm_pm = self._get_pass_manager_for_backend(backend_name)
+                transpiled_qc = ibm_pm.run(qc)
+
+                try:
+                    ibm_backend = AerSimulator(noise_model=noise_model, device=self.device_used)
+                except Exception:
+                    ibm_backend = AerSimulator(noise_model=noise_model)
+
+                ibm_sim_result = ibm_backend.run(
+                    transpiled_qc, shots=self.shots
+                ).result()
+                ibm_counts = ibm_sim_result.get_counts()
+                ibm_prob = ibm_counts.get(target, 0) / self.shots
+
+                ideal_prob = standard_result.get('ideal_probability', 0)
+                ibm_result = {
+                    'backend_name': backend_name,
+                    'noise_params': noise_params,
+                    'success_probability': round(ibm_prob, 4),
+                    'degradation': round(ideal_prob - ibm_prob, 4),
+                    'fidelity_ratio': round(
+                        ibm_prob / max(ideal_prob, 1e-10), 4
+                    ),
+                    'source': noise_params.get('source', 'unknown'),
+                }
+        except Exception as e:
+            ibm_result = {
+                'backend_name': backend_name,
+                'error': str(e),
+                'source': 'error',
+            }
+
+        return {
+            **standard_result,
+            'ibm_qpu_noise': ibm_result,
         }
 
     def _build_grover_circuit(

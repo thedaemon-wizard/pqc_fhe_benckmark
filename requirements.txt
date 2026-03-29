@@ -1,4 +1,4 @@
-# PQC-FHE Integration Portfolio v3.2.0
+# PQC-FHE Integration Portfolio v3.5.0
 # Requirements file for pip installation
 
 # =============================================================================
@@ -76,6 +76,7 @@ desilofhe-cu130>=1.10.0  # For CUDA 13.0 GPU benchmarks
 qiskit>=2.0.0
 qiskit-aer>=0.17.0
 qiskit-aer-gpu-cu11>=0.17.0  # For GPU-accelerated quantum simulation (CUDA 11.x)
+qiskit-ibm-runtime>=0.37.0   # For IBM Quantum QPU noise parameter fetching
 # =============================================================================
 # Classical Cryptography (Hybrid Mode)
 # =============================================================================

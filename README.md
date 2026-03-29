@@ -1,5 +1,4 @@
-
-# PQC-FHE Integration Platform v3.2.0
+# PQC-FHE Integration Platform v3.5.0
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
@@ -12,11 +11,90 @@ Production-ready framework combining **Post-Quantum Cryptography (PQC)** with **
 
 ## Documentation
 
-- [Technical Report v3.2.0 (PDF)](docs/PQC_FHE_Technical_Report_v3.2.0_Enterprise.pdf)
-- [Technical Report v3.2.0 (Word)](docs/PQC_FHE_Technical_Report_v3.2.0_Enterprise.docx)
+- [Technical Report v3.5.0 (PDF)](docs/PQC_FHE_Technical_Report_v3.5.0_Enterprise.pdf)
+- [Technical Report v3.5.0 (Word)](docs/PQC_FHE_Technical_Report_v3.5.0_Enterprise.docx)
 - [CHANGELOG](CHANGELOG.md)
 - [Summary Page(infographic)](https://thedaemon-wizard.github.io/pqc_fhe_benckmark/infographic.html)
 
+
+## What's New in v3.5.0
+
+### Accurate Hardware Discovery (FIX)
+- **ibm_torino corrected**: Heron r1 (133Q, Dec 2023), was incorrectly listed as Heron R2 (156Q)
+- **3 new Heron r2 backends**: `ibm_fez`, `ibm_kingston`, `ibm_marrakesh` (156Q each, Jul 2024)
+- **KNOWN_PROCESSORS expanded**: 3 → 6 backends with correct processor types and coherence times
+- **HERON_R2_FALLBACK fixed**: Now references `ibm_fez` (actual Heron r2) instead of `ibm_torino`
+
+### Benchmark Results Persistence (NEW)
+- **BenchmarkResultsManager**: Saves benchmark results as timestamped JSON files
+- **Circuit diagram auto-save**: Shor/Grover/ECC diagram endpoints persist PNG files
+- **3 new API endpoints**: `GET /benchmarks/results`, `GET /benchmarks/results/{filename}`, `GET /benchmarks/diagrams`
+- **All-Sector circuit diagrams**: Button 5 now displays circuit diagrams (previously only Button 4)
+
+### 2026 PQC Research Updates
+- **NIST IR 8547**: Classical algorithms deprecated by 2030, disallowed by 2035
+- **HQC selection**: 5th NIST PQC algorithm (code-based KEM, March 2025) — lattice monoculture mitigation
+- **CRQC estimate compression**: 20M (2021) → 1M (2025) → ~100K physical qubits (QLDPC, Feb 2026)
+- **Hybrid TLS default**: ML-KEM + X25519 now default in Chrome, Firefox, Cloudflare, Akamai
+- **AI-assisted side-channel**: Single-trace key recovery attacks on ML-KEM demonstrated (2026)
+
+### Infrastructure & Monitoring (NEW)
+- **Prometheus `/metrics` endpoint**: Zero-dependency exposition format (uptime, memory, HTTP stats, GC, app info)
+- **Docker image**: `pqc-fhe-api:v3.5.0` (420MB) — multi-stage build with liboqs 0.14.0
+- **Docker Compose monitoring**: API + Prometheus + Grafana with `--profile monitoring`
+- **Helm chart validated**: `helm lint` passed, `helm template` renders 8 Kubernetes manifests
+- **Shor test stabilization**: Probabilistic algorithm retry (max 3 attempts) for N=143, N=221
+
+### 17 New Tests (221 → 238 total)
+- Heron r1/r2 correctness: ibm_torino=r1(133Q), ibm_fez/kingston/marrakesh=r2(156Q)
+- BenchmarkResultsManager: save/load/list, path traversal prevention, PNG save
+
+## What's New in v3.4.0
+
+### Dynamic QPU Backend Discovery
+- **Server startup discovery**: Background thread connects to IBM Quantum API and discovers all operational QPU backends
+- **JSON file cache**: Dynamically fetched backends persisted to `data/ibm_backends_cache.json` for offline fallback
+- **3-tier fallback chain**: IBM Quantum Runtime API → JSON cache → KNOWN_PROCESSORS (hardcoded)
+- **Processor-specific basis_gates**: Heron=CZ, Eagle=ECR, Nighthawk=CZ
+- 15 new tests (206 → 221 total)
+
+## What's New in v3.3.0
+
+### IBM Quantum Hardware Noise Integration
+- **Dynamic QPU backend discovery**: Fetches real T1/T2/gate errors/readout errors from IBM Quantum Platform via `qiskit-ibm-runtime`
+- **IBM Heron r1 (ibm_torino, 133Q)** and **Heron r2 (ibm_fez, 156Q)**: CZ-based processors with published noise parameters
+- **Fallback-safe design**: Uses published QPU specs when API unavailable (6 backends: torino, brisbane, sherbrooke, fez, kingston, marrakesh)
+- **NoiseModel construction**: Thermal relaxation + depolarizing + readout errors from real hardware parameters
+- **WebUI backend selector**: Choose noise model for circuit benchmarks (Default/IBM Heron r2/discovered QPU backends)
+- **IBM QPU noise comparison**: Side-by-side sector profile vs IBM QPU noise fidelity in benchmark results
+
+### FHE Bootstrap Key Memory Optimization
+- **Deferred bootstrap loading**: `defer_bootstrap=True` skips ~24GB key creation at server startup
+- **Server memory reduced**: ~28GB → ~3.7GB (core keys only) at startup
+- **On-demand creation**: `ensure_bootstrap_keys()` creates keys when needed, auto-triggered by bootstrap operations
+- **Memory release**: `release_bootstrap_keys()` frees ~24GB with garbage collection
+- **API endpoints**: `GET /fhe/memory-status` and `POST /fhe/release-bootstrap-keys` for memory management
+
+### Agentic AI × PQC Research
+- wolfSSL SLIM (2025): MLS-based PQ channel binding for AI agents
+- IETF draft-mpsb-agntcy-messaging-01: Multi-agent PQ messaging protocol
+- IBM Pinnacle Architecture (Feb 2026): qLDPC codes, RSA-2048 ~100K physical qubits
+- Google Quantum AI revised Q-Day to ~2029
+- Q-Fusion diffusion model: Circuit layout from natural language
+- NVIDIA GQE: GPU-accelerated quantum error decoding
+
+### 6 API Endpoints (v3.3.0)
+- `GET /quantum/ibm/backends` - List IBM QPU backends
+- `GET /quantum/ibm/backend/{name}/noise-params` - QPU noise parameters
+- `POST /quantum/simulate/noisy-ibm` - IBM QPU noise model simulation
+- `GET /fhe/memory-status` - FHE bootstrap memory status
+- `POST /fhe/release-bootstrap-keys` - Release bootstrap keys
+
+### 28 New Tests (178 → 206 total)
+- IBM Quantum backend: 14 tests (fallback, cache, NoiseModel, profile compatibility)
+- FHE bootstrap deferred: 8 tests (defer, ensure, release, encrypt/decrypt without bootstrap)
+- FHE bootstrap config: 3 tests
+- Sector circuit IBM noise: 3 tests
 
 ## What's New in v3.2.0
 
@@ -78,7 +156,7 @@ Production-ready framework combining **Post-Quantum Cryptography (PQC)** with **
 - **Circuit visualization**: `generate_circuit_diagram()` renders Qiskit circuits as base64 PNG diagrams
 - **WebUI diagrams**: Shor N=15, Grover 4-qubit, ECC GF(2^4) circuit diagrams displayed after benchmark
 
-### 25 New API Endpoints (total)
+### 30 API Endpoints (total, v3.2.0 + v3.3.0)
 - `GET /quantum/shor-resources/multi-era` - 4-generation Shor resource comparison
 - `POST /quantum/simulate/noisy` - Noise-aware quantum simulation
 - `GET /security/side-channel/{algorithm}` - Per-algorithm side-channel assessment
@@ -188,7 +266,7 @@ Production-ready framework combining **Post-Quantum Cryptography (PQC)** with **
 - **JVG Algorithm (Mar 2026)**: DISMISSED — no valid quantum speedup demonstrated.
 
 #### Browser-Verified (March 2026)
-- **178 tests** all passing (Python 3.12.11, Qiskit 2.3.1, Aer 0.17.2)
+- **206 tests** all passing (Python 3.12.11, Qiskit 2.3.1, Aer 0.17.2, qiskit-ibm-runtime 0.46.1)
 - Healthcare (7), Finance (8), IoT (6), Blockchain (7), MPC-FHE (7) circuit benchmarks — all **🟢 GPU accelerated**
 - Shor N=15/21/35/143/221, Grover 4-16 qubit, ECC GF(2^4) — all on `AerSimulator(device='GPU')`
 - **GPU backend**: NVIDIA RTX PRO 6000 Blackwell 96GB via cuStateVec — ~25% speedup (Healthcare: 119.9s→89.5s)
@@ -299,6 +377,9 @@ Production-ready framework combining **Post-Quantum Cryptography (PQC)** with **
 | Post-Quantum Signatures | ML-DSA-44/65/87 (FIPS 204) | Production |
 | Hybrid Key Exchange | X25519 + ML-KEM-768 | Production |
 | Homomorphic Encryption | CKKS (DESILO FHE) | Production |
+| Dynamic QPU Discovery | API → JSON cache → fallback, least_busy, basis_gates | **v3.4.0** |
+| IBM Quantum QPU Noise | Real T1/T2/gate errors from IBM Quantum | **v3.3.0** |
+| FHE Bootstrap Optimization | Deferred ~24GB key loading | **v3.3.0** |
 | Quantum Circuit Benchmarks | Shor/Grover/ECC on AerSimulator GPU | **v3.2.0** |
 | Qiskit Pass Manager | Level 2/3 circuit optimization | **v3.2.0** |
 | Circuit Visualization | matplotlib PNG diagrams via API | **v3.2.0** |
@@ -537,6 +618,25 @@ python -m uvicorn api.server:app
 | `/fhe/decrypt` | POST | Decrypt ciphertext |
 | `/fhe/add` | POST | Homomorphic addition |
 | `/fhe/multiply` | POST | Homomorphic multiplication |
+| `/fhe/memory-status` | GET | FHE bootstrap key memory status (loaded/deferred) |
+| `/fhe/release-bootstrap-keys` | POST | Release bootstrap keys (~24GB freed) |
+
+### IBM Quantum Hardware (v3.3.0 + v3.4.0)
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/quantum/ibm/backends` | GET | List available IBM QPU backends (API/cache/fallback) |
+| `/quantum/ibm/backend/{name}/noise-params` | GET | QPU noise parameters (T1/T2/gate errors/basis_gates) |
+| `/quantum/ibm/least-busy` | GET | **[v3.4.0]** Get least busy IBM QPU backend |
+| `/quantum/simulate/noisy-ibm` | POST | IBM QPU noise model circuit simulation |
+
+### Monitoring & Health (v3.5.0)
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/health` | GET | Server health check (status, components, version) |
+| `/version` | GET | Version information from `version.json` |
+| `/metrics` | GET | **[v3.5.0]** Prometheus exposition format metrics (uptime, memory, HTTP stats, GC) |
 
 ### Extended Benchmarks (v3.0.0)
 
@@ -591,9 +691,10 @@ python -m uvicorn api.server:app
 ```
 pqc_fhe_benckmark/
 ├── api/
-│   └── server.py              # FastAPI server (v3.2.0, 64 endpoints)
+│   └── server.py              # FastAPI server (v3.5.0, 90 routes, /metrics)
 ├── src/
-│   ├── pqc_fhe_integration.py # Core PQC + FHE integration
+│   ├── pqc_fhe_integration.py # Core PQC + FHE integration (deferred bootstrap)
+│   ├── ibm_quantum_backend.py # [v3.5.0] IBM Quantum QPU noise fetcher + dynamic discovery + singleton
 │   ├── pqc_simulator.py       # ML-KEM/ML-DSA educational simulator
 │   ├── desilo_fhe_engine.py   # DESILO FHE CKKS engine
 │   ├── quantum_threat_simulator.py  # [v3.0.0] Shor/Grover estimator
@@ -607,17 +708,25 @@ pqc_fhe_benckmark/
 ├── benchmarks/
 │   └── __init__.py            # Performance benchmarks (incl. GPU)
 ├── tests/
-│   └── test_pqc_fhe.py        # 178 tests (v3.2.0)
+│   └── test_pqc_fhe.py        # 238 tests (v3.5.0)
 ├── kubernetes/
-│   └── helm/pqc-fhe/          # Helm chart
+│   └── helm/pqc-fhe/          # Helm chart (Deployment, Service, Ingress, HPA, NetworkPolicy, RBAC)
 ├── monitoring/
-│   └── prometheus.yml         # Prometheus config
+│   └── prometheus.yml         # Prometheus scrape config (api, gpu, redis targets)
+├── docker-compose.yml         # API + Prometheus + Grafana (monitoring profile)
+├── Dockerfile                 # Multi-stage build (liboqs 0.14.0, python:3.12-slim, 420MB)
+├── Dockerfile.gpu             # GPU build (CUDA 12.2, liboqs 0.14.0)
 ├── web_ui/
 │   └── index.html             # React Web UI (9 tabs)
 ├── docs/
-│   ├── PQC_FHE_Technical_Report_v3.2.0_Enterprise.docx
-│   └── PQC_FHE_Technical_Report_v3.2.0_Enterprise.pdf
-├── version.json               # [v3.2.0] Dynamic version configuration
+│   ├── PQC_FHE_Technical_Report_v3.5.0_Enterprise.docx
+│   ├── PQC_FHE_Technical_Report_v3.5.0_Enterprise.pdf
+│   └── infographic.html       # Project infographic (v3.5.0)
+├── data/
+│   ├── ibm_backends_cache.json # [v3.5.0] Dynamic QPU backend cache (6 backends)
+│   ├── benchmark_results/     # [v3.5.0] Saved benchmark results (JSON)
+│   └── circuit_diagrams/      # [v3.5.0] Saved circuit diagrams (PNG)
+├── version.json               # [v3.5.0] Dynamic version configuration
 ├── logs/                      # Log files (auto-created)
 └── README.md
 ```
@@ -674,8 +783,72 @@ pqc_fhe_benckmark/
 24. NIST SP 800-227 (Sep 2025): KEM operational guidance (finalized)
 25. BDGL sieve optimality (Jan 2026): NNS paradigm proven optimal for lattice sieving
 26. IBM Quantum Roadmap 2026: Kookaburra (4,158 qubits with qLDPC memory)
+27. IBM Quantum Docs — Processor Types: https://quantum.cloud.ibm.com/docs/guides/processor-types
+28. IBM Quantum Docs — Build Noise Models: https://quantum.cloud.ibm.com/docs/guides/build-noise-models
+29. IBM Quantum Docs — Error Mitigation Overview: https://quantum.cloud.ibm.com/docs/guides/error-mitigation-overview
+30. IBM Quantum Docs — QPU Information: https://quantum.cloud.ibm.com/docs/guides/qpu-information
+31. IBM Quantum Learning — Shor's Algorithm: https://quantum.cloud.ibm.com/learning/ja/modules/computer-science/shors-algorithm
+32. IBM Quantum Learning — Grover's Algorithm: https://quantum.cloud.ibm.com/learning/ja/modules/computer-science/grovers
+33. NIST IR 8547: Transition to Post-Quantum Cryptography Standards (November 2024) — 2030 deprecated, 2035 disallowed
+34. IBM Quantum Open Plan Updates (March 2026): Heron r3 (156Q), Flamingo (1,386Q announced), ibm_kingston 2Q error 2.03e-3
+35. NIST IR 8545: HQC Selection as 5th PQC Algorithm (March 2025) — code-based KEM for lattice monoculture mitigation
+36. Iceberg Quantum (Feb 2026): QLDPC codes enable RSA-2048 attack with <100K physical qubits
+37. Security Boulevard: Enterprise PQC Migration Guide 2026 — HNDL risk assessment, sector-specific timelines
+38. MOZAIK (Jan 2026): Open-source MPC+FHE IoT Platform — privacy-preserving ML on constrained devices
+39. MDPI: HNDL Temporal Cybersecurity Risk Model — Mosca theorem formalization for data retention vs Q-Day
+40. Microsoft Majorana 1 (Feb 2025): Topological qubits — potential for lower error rates in future CRQC
+
+## Platform Validation & Limitations
+
+### Why Small-Scale Quantum Circuits Are Valid
+
+This platform uses 8-24 qubit circuits for Shor, Grover, and ECC demonstrations. This approach is standard across quantum computing research:
+
+- **IBM Quantum Learning**: Official tutorials use N=15 factoring (8 qubits) for Shor's algorithm
+- **Google Cirq**: Tutorials use 4-8 qubit Grover search demonstrations
+- **Academic papers**: Gidney & Ekera (2021), Chevignard et al. (2024), Pinnacle (2026) all provide extrapolation models from small demonstrations
+
+### Extrapolation Model Sources
+
+- **RSA-2048 resource estimates**: ~20M physical qubits (Gidney 2021) → ~1M (Gidney 2025, magic state cultivation) → ~100K (Pinnacle 2026, QLDPC codes)
+- **AES-128/256 Grover**: 2,953-6,681 logical qubits (Grassl 2016), optimized T-depth=30 (ASIACRYPT 2025)
+- **ECC P-256**: 2,330 logical qubits (Roetteler 2017), exact gate counts (arXiv:2503.02984, March 2025)
+
+### Known Limitations
+
+1. **Scale gap**: RSA-2048 requires ~4,000+ logical qubits; current max is 156 physical qubits (no error correction)
+2. **Extrapolation uncertainty**: Resource estimates depend on theoretical models; implementation overhead not included
+3. **Lattice monoculture risk**: ML-KEM, ML-DSA, FN-DSA, and CKKS all rely on lattice assumptions — HQC (code-based) mitigates this but is not yet standardized (expected 2027)
+4. **Side-channel attacks**: Platform evaluates but does not implement hardware-level countermeasures
+5. **AI-assisted attacks**: ML-KEM single-trace key recovery demonstrated in 2026 — constant-time implementation required
+
+### NIST IR 8547 Migration Timeline
+
+| Year | Status | Action Required |
+|------|--------|----------------|
+| 2024 | Current | Begin PQC evaluation and planning |
+| 2030 | Deprecated | RSA, ECDSA, DH deprecated; PQC preferred |
+| 2035 | Disallowed | Classical-only algorithms prohibited |
 
 ## Version History
+
+### v3.5.0 (2026-03-29)
+- **Accurate Hardware Discovery**: ibm_torino corrected to Heron r1 (133Q), added ibm_fez/kingston/marrakesh as Heron r2 (156Q)
+- **Benchmark Results Persistence**: BenchmarkResultsManager saves results and circuit diagrams to files
+- **Prometheus `/metrics` endpoint**: Zero-dependency exposition format (uptime, memory, HTTP stats, GC, app info)
+- **Docker image verified**: `pqc-fhe-api:v3.5.0` (420MB), multi-stage build with liboqs 0.14.0
+- **Docker Compose monitoring**: API + Prometheus + Grafana stack verified end-to-end
+- **Helm chart validated**: `helm lint` passed, `helm template` renders 8 Kubernetes manifests
+- **All-Sector circuit diagrams**: Button 5 now displays Shor/Grover/ECC circuit diagrams
+- **KNOWN_PROCESSORS expanded**: 3 → 6 backends, HERON_R2_FALLBACK corrected to ibm_fez
+- **2026 PQC research**: NIST IR 8547 timeline, HQC, CRQC ~100K qubits, Hybrid TLS default
+- 17 new tests (238 total), 90 API routes, Platform Validation section added
+
+### v3.4.0 (2026-03-29)
+- **Dynamic QPU backend discovery**: Server startup connects to IBM Quantum API, persists to JSON cache
+- **3-tier fallback chain**: API → JSON cache file → KNOWN_PROCESSORS (hardcoded)
+- **Processor-specific basis_gates**: Heron=CZ, Eagle=ECR, Nighthawk=CZ
+- 15 new tests (221 total), 70 endpoints
 
 ### v3.2.0 (2026-03-19)
 - **GPU acceleration**: All circuit verifiers use `AerSimulator(device='GPU')` with CPU fallback (~25% speedup)

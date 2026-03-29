@@ -183,7 +183,8 @@ class FHEConfig:
     bootstrap_threshold: int = 8
     value_range_max: float = 50.0
     create_matrix_key: bool = False  # Very memory intensive (~16GB for slot_count=1024)
-    
+    defer_bootstrap: bool = False    # True: defer bootstrap key creation until needed (~24GB savings)
+
     @property
     def slot_count(self) -> int:
         """Number of CKKS slots (N/2)"""
@@ -623,29 +624,31 @@ class FHEEngine:
         
         self.logger.info("  Core keys generated: secret, public, relin, rotation, conjugation")
         
-        # Bootstrap keys
-        if self.config.use_bootstrap:
+        # Bootstrap keys — defer if configured to save ~24GB at startup
+        if self.config.use_bootstrap and not self.config.defer_bootstrap:
             stage_count = self.config.bootstrap_stage_count
-            
+
             # Small bootstrap key (223 MB, works from level >= 0)
             self.keys['small_bootstrap'] = self.engine.create_small_bootstrap_key(
                 self.keys['secret']
             )
             self.logger.info("  Small bootstrap key created (223 MB, level >= 0)")
-            
+
             # Lossy bootstrap key (11.3 GB, faster, requires level >= stage_count)
             if self.config.use_lossy_bootstrap:
                 self.keys['lossy_bootstrap'] = self.engine.create_lossy_bootstrap_key(
                     self.keys['secret'], stage_count=stage_count
                 )
                 self.logger.info(f"  Lossy bootstrap key created (11.3 GB, level >= {stage_count})")
-            
+
             # Full bootstrap key (12.3 GB)
             if self.config.use_full_bootstrap_key:
                 self.keys['full_bootstrap'] = self.engine.create_bootstrap_key(
                     self.keys['secret'], stage_count=stage_count
                 )
                 self.logger.info("  Full bootstrap key created (12.3 GB)")
+        elif self.config.use_bootstrap and self.config.defer_bootstrap:
+            self.logger.info("  Bootstrap keys DEFERRED (will create on demand, ~24GB saved)")
         
         # Matrix multiplication key (very memory intensive)
         if self.config.create_matrix_key:
@@ -672,7 +675,78 @@ class FHEEngine:
         
         available = [k for k, v in self._api_features.items() if v]
         self.logger.info(f"  Available API features: {available}")
-    
+
+    # =========================================================================
+    # Bootstrap Key Lifecycle Management (Deferred Loading / Memory Optimization)
+    # =========================================================================
+
+    @property
+    def bootstrap_keys_loaded(self) -> bool:
+        """Check if bootstrap keys are currently loaded in memory."""
+        return 'small_bootstrap' in self.keys or 'full_bootstrap' in self.keys
+
+    def ensure_bootstrap_keys(self):
+        """
+        Create bootstrap keys on demand (lazy loading).
+
+        No-op if bootstrap keys are already created.
+        Call this before any bootstrap operation when defer_bootstrap=True.
+        Memory cost: ~24GB (small 223MB + lossy 11.3GB + full 12.3GB).
+        """
+        if self.bootstrap_keys_loaded:
+            return  # Already initialized
+        if not self.config.use_bootstrap:
+            self.logger.warning("Bootstrap not enabled in config — cannot create keys")
+            return
+
+        self.logger.info("Creating bootstrap keys on demand...")
+        stage_count = self.config.bootstrap_stage_count
+
+        # Small bootstrap key (223 MB, works from level >= 0)
+        self.keys['small_bootstrap'] = self.engine.create_small_bootstrap_key(
+            self.keys['secret']
+        )
+        self.logger.info("  Small bootstrap key created (223 MB)")
+
+        # Lossy bootstrap key (11.3 GB)
+        if self.config.use_lossy_bootstrap:
+            self.keys['lossy_bootstrap'] = self.engine.create_lossy_bootstrap_key(
+                self.keys['secret'], stage_count=stage_count
+            )
+            self.logger.info(f"  Lossy bootstrap key created (11.3 GB)")
+
+        # Full bootstrap key (12.3 GB)
+        if self.config.use_full_bootstrap_key:
+            self.keys['full_bootstrap'] = self.engine.create_bootstrap_key(
+                self.keys['secret'], stage_count=stage_count
+            )
+            self.logger.info("  Full bootstrap key created (12.3 GB)")
+
+        self.logger.info("Bootstrap keys created on demand successfully")
+
+    def release_bootstrap_keys(self) -> list:
+        """
+        Release bootstrap keys to free memory (~24GB).
+
+        After calling this, bootstrap operations will auto-recreate keys
+        on next use if defer_bootstrap is enabled.
+
+        Returns:
+            List of released key names.
+        """
+        released = []
+        for key_name in ['small_bootstrap', 'lossy_bootstrap', 'full_bootstrap']:
+            if key_name in self.keys:
+                del self.keys[key_name]
+                released.append(key_name)
+        if released:
+            import gc
+            gc.collect()
+            self.logger.info(f"Released bootstrap keys: {released} (~24GB freed)")
+        else:
+            self.logger.info("No bootstrap keys to release")
+        return released
+
     # =========================================================================
     # Core Encryption/Decryption Operations
     # =========================================================================
@@ -941,6 +1015,9 @@ class FHEEngine:
             
         Reference: https://fhe.desilo.dev/latest/api/engine/bootstrap/
         """
+        # Auto-create bootstrap keys if deferred
+        if not self.bootstrap_keys_loaded:
+            self.ensure_bootstrap_keys()
         if 'full_bootstrap' in self.keys:
             return self.engine.bootstrap(
                 ct,
@@ -980,6 +1057,9 @@ class FHEEngine:
             
         Reference: https://fhe.desilo.dev/latest/api/engine/lossy_bootstrap/
         """
+        # Auto-create bootstrap keys if deferred
+        if not self.bootstrap_keys_loaded:
+            self.ensure_bootstrap_keys()
         level = self.get_level(ct)
         stage_count = self.config.bootstrap_stage_count
         
@@ -1029,6 +1109,9 @@ class FHEEngine:
             
         Reference: https://fhe.desilo.dev/latest/api/engine/sign_bootstrap/
         """
+        # Auto-create bootstrap keys if deferred
+        if not self.bootstrap_keys_loaded:
+            self.ensure_bootstrap_keys()
         if not self._api_features.get('sign_bootstrap', False):
             self.logger.warning("sign_bootstrap not available, using lossy_bootstrap")
             return self.lossy_bootstrap(ct)

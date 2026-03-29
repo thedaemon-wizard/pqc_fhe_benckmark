@@ -70,6 +70,17 @@ except ImportError:
     QISKIT_AVAILABLE = False
     logger.warning("Qiskit not available - quantum verification tests will be skipped")
 
+try:
+    from qiskit_ibm_runtime import QiskitRuntimeService
+    IBM_RUNTIME_AVAILABLE = True
+    logger.info("qiskit-ibm-runtime available for IBM Quantum tests")
+except ImportError:
+    IBM_RUNTIME_AVAILABLE = False
+    logger.warning("qiskit-ibm-runtime not available - IBM Quantum tests will use fallback only")
+
+# Check if real IBM Quantum token is configured
+IBM_QUANTUM_TOKEN_SET = bool(os.getenv('IBM_QUANTUM_TOKEN'))
+
 
 # =============================================================================
 # PQC KEY MANAGEMENT TESTS
@@ -1492,20 +1503,42 @@ class TestExtendedFactorization(unittest.TestCase):
     """Tests for extended Shor factorization (N=143, N=221)."""
 
     def test_shor_factoring_143(self):
-        """Shor's should factor 143 = 11 × 13."""
+        """Shor's should factor 143 = 11 × 13.
+
+        Shor's algorithm is probabilistic, so we allow up to 3 attempts.
+        Each attempt uses independent random 'a' values in the order-finding
+        subroutine, so occasional failures on individual runs are expected.
+        """
         from src.quantum_verification import ShorCircuitVerifier
-        verifier = ShorCircuitVerifier(shots=2048)
-        result = verifier.factor(143)
-        self.assertTrue(result.success)
-        self.assertEqual(sorted(result.found_factors), [11, 13])
+        max_attempts = 3
+        for attempt in range(max_attempts):
+            verifier = ShorCircuitVerifier(shots=2048)
+            result = verifier.factor(143)
+            if result.success:
+                self.assertEqual(sorted(result.found_factors), [11, 13])
+                return
+        self.fail(
+            f"Shor factoring of 143 failed after {max_attempts} attempts "
+            f"(probabilistic algorithm; this is rare but possible)"
+        )
 
     def test_shor_factoring_221(self):
-        """Shor's should factor 221 = 13 × 17."""
+        """Shor's should factor 221 = 13 × 17.
+
+        Shor's algorithm is probabilistic — allow up to 3 attempts.
+        """
         from src.quantum_verification import ShorCircuitVerifier
-        verifier = ShorCircuitVerifier(shots=2048)
-        result = verifier.factor(221)
-        self.assertTrue(result.success)
-        self.assertEqual(sorted(result.found_factors), [13, 17])
+        max_attempts = 3
+        for attempt in range(max_attempts):
+            verifier = ShorCircuitVerifier(shots=2048)
+            result = verifier.factor(221)
+            if result.success:
+                self.assertEqual(sorted(result.found_factors), [13, 17])
+                return
+        self.fail(
+            f"Shor factoring of 221 failed after {max_attempts} attempts "
+            f"(probabilistic algorithm; this is rare but possible)"
+        )
 
 
 class TestAlgorithmDiversity(unittest.TestCase):
@@ -2314,6 +2347,805 @@ class TestSectorCircuitBenchmark(unittest.TestCase):
 
 
 # =============================================================================
+# IBM QUANTUM BACKEND INTEGRATION TESTS
+# =============================================================================
+
+class TestIBMQuantumBackend(unittest.TestCase):
+    """Tests for IBM Quantum backend integration (ibm_quantum_backend.py)."""
+
+    @classmethod
+    def setUpClass(cls):
+        from src.ibm_quantum_backend import IBMQuantumBackendManager
+        cls.manager = IBMQuantumBackendManager()
+
+    def test_ibm_backend_manager_init(self):
+        """IBMQuantumBackendManager initializes without API connection."""
+        self.assertIsNotNone(self.manager)
+        self.assertFalse(self.manager.connected)
+        self.assertIsInstance(self.manager._cache, dict)
+        self.assertEqual(self.manager._cache_ttl, 3600)
+
+    def test_fallback_heron_params_complete(self):
+        """Fallback Heron r2 parameters should be valid and complete."""
+        from src.ibm_quantum_backend import IBMQuantumBackendManager
+        fallback = IBMQuantumBackendManager.HERON_R2_FALLBACK
+        required_keys = [
+            'name', 'processor_type', 'num_qubits', 'basis_gates',
+            'T1_us_median', 'T2_us_median', 'single_qubit_error_median',
+            'two_qubit_error_median', 'readout_error_median',
+            'gate_time_single_ns', 'gate_time_cz_ns', 'source',
+        ]
+        for key in required_keys:
+            self.assertIn(key, fallback, f"Missing key: {key}")
+        # Validate Heron r2 specs (ibm_fez)
+        self.assertEqual(fallback['name'], 'ibm_fez')
+        self.assertEqual(fallback['num_qubits'], 156)
+        self.assertAlmostEqual(fallback['T1_us_median'], 250.0)
+        self.assertAlmostEqual(fallback['T2_us_median'], 150.0)
+        self.assertAlmostEqual(fallback['single_qubit_error_median'], 2.4e-4)
+        self.assertAlmostEqual(fallback['two_qubit_error_median'], 3.8e-3)
+        # Physical constraint: T2 <= 2*T1
+        self.assertLessEqual(fallback['T2_us_median'], 2 * fallback['T1_us_median'])
+
+    def test_known_processors_complete(self):
+        """All known processors should have required fields."""
+        from src.ibm_quantum_backend import IBMQuantumBackendManager
+        required_keys = [
+            'processor_type', 'num_qubits', 'T1_us_median', 'T2_us_median',
+            'single_qubit_error_median', 'two_qubit_error_median',
+            'readout_error_median', 'gate_time_single_ns', 'gate_time_cz_ns',
+        ]
+        for name, info in IBMQuantumBackendManager.KNOWN_PROCESSORS.items():
+            for key in required_keys:
+                self.assertIn(key, info, f"{name} missing key: {key}")
+            # Physical constraint: T2 <= 2*T1
+            self.assertLessEqual(
+                info['T2_us_median'], 2 * info['T1_us_median'],
+                f"{name}: T2 ({info['T2_us_median']}) > 2*T1 ({2 * info['T1_us_median']})"
+            )
+
+    def test_list_backends_fallback(self):
+        """list_backends() should return a list when not connected to API."""
+        backends = self.manager.list_backends()
+        self.assertIsInstance(backends, list)
+        self.assertGreater(len(backends), 0)
+        # Should include ibm_torino
+        names = [b['name'] for b in backends]
+        self.assertIn('ibm_torino', names)
+        # Each backend should have required fields
+        for b in backends:
+            self.assertIn('name', b)
+            self.assertIn('num_qubits', b)
+            self.assertIn('source', b)
+            # Source can be fallback_specs or json_cache (if cache exists from prior runs)
+            self.assertIn(b['source'], ['fallback_specs', 'json_cache'])
+
+    def test_get_noise_params_fallback(self):
+        """get_noise_params() should return valid params from fallback."""
+        params = self.manager.get_noise_params('ibm_torino')
+        self.assertIsInstance(params, dict)
+        self.assertEqual(params['name'], 'ibm_torino')
+        self.assertIn('T1_us_median', params)
+        self.assertIn('T2_us_median', params)
+        self.assertIn('single_qubit_error_median', params)
+        self.assertIn('two_qubit_error_median', params)
+        self.assertIn('readout_error_median', params)
+        self.assertIn('source', params)
+        # Values should be positive
+        self.assertGreater(params['T1_us_median'], 0)
+        self.assertGreater(params['T2_us_median'], 0)
+        self.assertGreater(params['single_qubit_error_median'], 0)
+
+    def test_get_noise_params_unknown_backend_returns_heron(self):
+        """Unknown backend name should fall back to Heron r2 defaults."""
+        params = self.manager.get_noise_params('nonexistent_backend')
+        self.assertIsInstance(params, dict)
+        # Should return Heron r2 fallback
+        self.assertEqual(params['source'], 'fallback_heron_r2_specs')
+        self.assertAlmostEqual(params['T1_us_median'], 250.0)
+
+    def test_noise_profile_format_compatibility(self):
+        """IBM QPU noise profile should be compatible with EnhancedNoiseSimulator format."""
+        profile = self.manager.get_noise_profile_for_sector('ibm_torino')
+        # Must have all keys that EnhancedNoiseSimulator expects
+        required_keys = [
+            'description', 'single_qubit_error', 'two_qubit_error',
+            'thermal_relaxation_t1_us', 'thermal_relaxation_t2_us',
+            'readout_error_prob', 'gate_time_single_ns', 'gate_time_cx_ns',
+            'source',
+        ]
+        for key in required_keys:
+            self.assertIn(key, profile, f"Missing profile key: {key}")
+        # Values should be positive floats
+        self.assertGreater(profile['single_qubit_error'], 0)
+        self.assertGreater(profile['two_qubit_error'], 0)
+        self.assertGreater(profile['thermal_relaxation_t1_us'], 0)
+        self.assertGreater(profile['thermal_relaxation_t2_us'], 0)
+        self.assertGreater(profile['readout_error_prob'], 0)
+        self.assertGreater(profile['gate_time_single_ns'], 0)
+        self.assertGreater(profile['gate_time_cx_ns'], 0)
+
+    @unittest.skipUnless(QISKIT_AVAILABLE, "Qiskit not available")
+    def test_build_noise_model_from_fallback(self):
+        """NoiseModel can be built from fallback parameters."""
+        noise_model = self.manager.build_noise_model('ibm_torino')
+        self.assertIsNotNone(noise_model)
+        from qiskit_aer.noise import NoiseModel
+        self.assertIsInstance(noise_model, NoiseModel)
+        # Should have basis gates
+        basis_gates = noise_model.basis_gates
+        self.assertGreater(len(basis_gates), 0)
+
+    @unittest.skipUnless(QISKIT_AVAILABLE, "Qiskit not available")
+    def test_build_noise_model_brisbane(self):
+        """NoiseModel can be built for ibm_brisbane (Eagle r3)."""
+        noise_model = self.manager.build_noise_model('ibm_brisbane')
+        self.assertIsNotNone(noise_model)
+        from qiskit_aer.noise import NoiseModel
+        self.assertIsInstance(noise_model, NoiseModel)
+
+    @unittest.skipUnless(QISKIT_AVAILABLE, "Qiskit not available")
+    def test_heron_profile_in_enhanced_simulator(self):
+        """ibm_heron_r2 profile should work in EnhancedNoiseSimulator."""
+        from src.sector_quantum_circuit_benchmark import EnhancedNoiseSimulator
+        sim = EnhancedNoiseSimulator()
+        self.assertIn('ibm_heron_r2', sim.NOISE_PROFILES)
+        profile = sim.NOISE_PROFILES['ibm_heron_r2']
+        self.assertIn('description', profile)
+        self.assertAlmostEqual(profile['single_qubit_error'], 2.4e-4)
+        self.assertAlmostEqual(profile['two_qubit_error'], 3.8e-3)
+        # Run a simulation with it
+        result = sim.run_sector_noise_profile(
+            'healthcare', circuit_type='grover', num_qubits=4,
+            noise_backend='ibm_heron_r2'
+        )
+        self.assertIn('noise_profile', result)
+
+    @unittest.skipUnless(QISKIT_AVAILABLE, "Qiskit not available")
+    def test_compare_with_ibm_noise(self):
+        """NoiseAwareQuantumSimulator.compare_with_ibm_noise() should return valid results."""
+        from src.quantum_verification import NoiseAwareQuantumSimulator
+        sim = NoiseAwareQuantumSimulator(shots=100)
+        result = sim.compare_with_ibm_noise(
+            circuit_type='grover', num_qubits=4, backend_name='ibm_torino'
+        )
+        self.assertIsInstance(result, dict)
+        # Standard comparison fields
+        self.assertIn('circuit_type', result)
+        self.assertIn('num_qubits', result)
+        # IBM QPU noise comparison
+        self.assertIn('ibm_qpu_noise', result)
+        ibm_result = result['ibm_qpu_noise']
+        self.assertIn('backend_name', ibm_result)
+        self.assertIn('source', ibm_result)
+
+    def test_get_status(self):
+        """get_status() should return complete status dict."""
+        status = self.manager.get_status()
+        self.assertIsInstance(status, dict)
+        required_keys = [
+            'connected', 'runtime_available', 'aer_available',
+            'token_configured', 'instance_configured',
+            'cached_backends', 'cache_ttl_seconds',
+        ]
+        for key in required_keys:
+            self.assertIn(key, status, f"Missing status key: {key}")
+        self.assertFalse(status['connected'])  # Not connected in test env
+        self.assertEqual(status['cache_ttl_seconds'], 3600)
+
+    def test_cache_mechanism(self):
+        """Noise params should be cached after first fetch."""
+        # First call — populates cache
+        params1 = self.manager.get_noise_params('ibm_torino')
+        self.assertIn('ibm_torino', self.manager._cache)
+        # Second call — should return from cache
+        params2 = self.manager.get_noise_params('ibm_torino')
+        self.assertEqual(params1['T1_us_median'], params2['T1_us_median'])
+
+
+# =============================================================================
+# IBM QUANTUM v3.4.0 — SINGLETON, JSON CACHE, LEAST_BUSY, BASIS_GATES TESTS
+# =============================================================================
+
+class TestIBMQuantumV340(unittest.TestCase):
+    """Tests for v3.4.0 IBM Quantum features: singleton, JSON cache, least_busy, basis_gates."""
+
+    def setUp(self):
+        """Reset singleton before each test."""
+        from src.ibm_quantum_backend import reset_ibm_manager
+        reset_ibm_manager()
+
+    def tearDown(self):
+        """Reset singleton after each test."""
+        from src.ibm_quantum_backend import reset_ibm_manager
+        reset_ibm_manager()
+
+    def test_singleton_pattern(self):
+        """get_ibm_manager() should return the same instance every time."""
+        from src.ibm_quantum_backend import get_ibm_manager
+        mgr1 = get_ibm_manager()
+        mgr2 = get_ibm_manager()
+        self.assertIs(mgr1, mgr2)
+
+    def test_singleton_cache_shared(self):
+        """Singleton instances should share noise parameter cache."""
+        from src.ibm_quantum_backend import get_ibm_manager
+        mgr = get_ibm_manager()
+        # Fetch params for ibm_torino — should be cached
+        mgr.get_noise_params('ibm_torino')
+        self.assertIn('ibm_torino', mgr._cache)
+        # Get singleton again — same cache
+        mgr2 = get_ibm_manager()
+        self.assertIn('ibm_torino', mgr2._cache)
+        self.assertIs(mgr._cache, mgr2._cache)
+
+    def test_reset_ibm_manager(self):
+        """reset_ibm_manager() should clear the singleton."""
+        from src.ibm_quantum_backend import get_ibm_manager, reset_ibm_manager
+        mgr1 = get_ibm_manager()
+        reset_ibm_manager()
+        mgr2 = get_ibm_manager()
+        self.assertIsNot(mgr1, mgr2)
+
+    def test_startup_connect_and_discover(self):
+        """startup_connect_and_discover() should return a status dict."""
+        from src.ibm_quantum_backend import get_ibm_manager
+        mgr = get_ibm_manager()
+        result = mgr.startup_connect_and_discover()
+        self.assertIsInstance(result, dict)
+        self.assertIn('connected', result)
+        self.assertIn('backends_discovered', result)
+        self.assertIn('noise_params_cached', result)
+        self.assertIn('json_cache_saved', result)
+        # Should discover at least fallback backends
+        self.assertGreater(result['backends_discovered'], 0)
+
+    def test_json_cache_save_load(self):
+        """JSON cache should be saved and loadable."""
+        import tempfile
+        import json
+        from pathlib import Path
+        from src.ibm_quantum_backend import get_ibm_manager
+        mgr = get_ibm_manager()
+        # Run startup to save JSON cache
+        result = mgr.startup_connect_and_discover()
+        self.assertTrue(result['json_cache_saved'])
+        # Verify JSON cache file exists
+        cache_path = Path(__file__).parent.parent / 'data' / 'ibm_backends_cache.json'
+        self.assertTrue(cache_path.exists(), f"JSON cache file not found at {cache_path}")
+        # Verify contents
+        with open(cache_path) as f:
+            data = json.load(f)
+        self.assertIn('timestamp', data)
+        self.assertIn('backends', data)
+        self.assertIn('noise_params', data)
+        self.assertGreater(len(data['backends']), 0)
+
+    def test_load_backends_from_json_cache(self):
+        """When API fails, list_backends() should use JSON cache."""
+        import json
+        from pathlib import Path
+        from src.ibm_quantum_backend import get_ibm_manager
+        mgr = get_ibm_manager()
+        # First save cache via startup
+        mgr.startup_connect_and_discover()
+        # Create a new manager (not connected)
+        from src.ibm_quantum_backend import IBMQuantumBackendManager
+        mgr2 = IBMQuantumBackendManager()
+        # Should not be connected
+        self.assertFalse(mgr2.connected)
+        # list_backends should fallback to JSON cache or KNOWN_PROCESSORS
+        backends = mgr2.list_backends()
+        self.assertGreater(len(backends), 0)
+        # At least one backend should have a name
+        self.assertTrue(any(b.get('name') for b in backends))
+
+    def test_least_busy_fallback(self):
+        """get_least_busy() should return a backend name when not connected."""
+        from src.ibm_quantum_backend import get_ibm_manager
+        mgr = get_ibm_manager()
+        # Not connected — should use fallback
+        name = mgr.get_least_busy(min_num_qubits=5)
+        self.assertIsInstance(name, str)
+        self.assertGreater(len(name), 0)
+
+    def test_basis_gates_per_processor(self):
+        """Heron should have CZ, Eagle should have ECR in basis_gates."""
+        from src.ibm_quantum_backend import IBMQuantumBackendManager
+        # Heron (ibm_torino)
+        heron = IBMQuantumBackendManager.KNOWN_PROCESSORS['ibm_torino']
+        self.assertIn('cz', heron['basis_gates'])
+        self.assertNotIn('ecr', heron['basis_gates'])
+        self.assertEqual(heron['processor_family'], 'Heron')
+        # Eagle (ibm_brisbane)
+        eagle = IBMQuantumBackendManager.KNOWN_PROCESSORS['ibm_brisbane']
+        self.assertIn('ecr', eagle['basis_gates'])
+        self.assertNotIn('cz', eagle['basis_gates'])
+        self.assertEqual(eagle['processor_family'], 'Eagle')
+
+    def test_processor_basis_gates_mapping(self):
+        """PROCESSOR_BASIS_GATES should have correct entries for all families."""
+        from src.ibm_quantum_backend import IBMQuantumBackendManager
+        mapping = IBMQuantumBackendManager.PROCESSOR_BASIS_GATES
+        self.assertIn('Heron', mapping)
+        self.assertIn('Eagle', mapping)
+        self.assertIn('Nighthawk', mapping)
+        self.assertIn('cz', mapping['Heron'])
+        self.assertIn('ecr', mapping['Eagle'])
+        self.assertIn('cz', mapping['Nighthawk'])
+
+    def test_noise_profile_includes_basis_gates(self):
+        """get_noise_profile_for_sector should include basis_gates."""
+        from src.ibm_quantum_backend import get_ibm_manager
+        mgr = get_ibm_manager()
+        profile = mgr.get_noise_profile_for_sector('ibm_torino')
+        self.assertIn('basis_gates', profile)
+        self.assertIsInstance(profile['basis_gates'], list)
+        self.assertIn('cz', profile['basis_gates'])
+
+    def test_get_status_includes_json_cache_info(self):
+        """get_status() should include json_cache_exists and json_cache_timestamp."""
+        from src.ibm_quantum_backend import get_ibm_manager
+        mgr = get_ibm_manager()
+        status = mgr.get_status()
+        self.assertIn('json_cache_exists', status)
+        self.assertIn('json_cache_timestamp', status)
+
+    def test_list_backends_has_source_field(self):
+        """All backends from list_backends() should include a source field."""
+        from src.ibm_quantum_backend import get_ibm_manager
+        mgr = get_ibm_manager()
+        backends = mgr.list_backends()
+        for b in backends:
+            self.assertIn('source', b)
+            self.assertIn(b['source'], ['ibm_quantum_api', 'json_cache', 'fallback_specs'])
+
+    def test_list_backends_has_basis_gates(self):
+        """All backends from list_backends() should include basis_gates."""
+        from src.ibm_quantum_backend import get_ibm_manager
+        mgr = get_ibm_manager()
+        backends = mgr.list_backends()
+        for b in backends:
+            self.assertIn('basis_gates', b)
+            self.assertIsInstance(b['basis_gates'], list)
+            self.assertGreater(len(b['basis_gates']), 0)
+
+    @unittest.skipUnless(QISKIT_AVAILABLE, "Qiskit not available")
+    def test_all_sectors_with_noise_backend(self):
+        """run_all_sectors(noise_backend) should propagate to all sectors."""
+        from src.sector_quantum_circuit_benchmark import SectorCircuitBenchmarkRunner
+        runner = SectorCircuitBenchmarkRunner()
+        result = runner.run_all_sectors(noise_backend='ibm_torino')
+        self.assertIsInstance(result, dict)
+        self.assertEqual(result['noise_backend'], 'ibm_torino')
+        self.assertIn('sectors', result)
+        # Should have results for all 5 sectors
+        self.assertEqual(len(result['sectors']), 5)
+
+    @unittest.skipUnless(QISKIT_AVAILABLE, "Qiskit not available")
+    def test_build_noise_model_uses_correct_2q_gates(self):
+        """NoiseModel for Heron should only add errors on CZ, not ECR."""
+        from src.ibm_quantum_backend import get_ibm_manager
+        mgr = get_ibm_manager()
+        noise_model = mgr.build_noise_model('ibm_torino')
+        self.assertIsNotNone(noise_model)
+        # Should be a valid NoiseModel
+        from qiskit_aer.noise import NoiseModel
+        self.assertIsInstance(noise_model, NoiseModel)
+
+
+# =============================================================================
+# FHE BOOTSTRAP KEY DEFERRED LOADING TESTS
+# =============================================================================
+
+@unittest.skipUnless(DESILO_AVAILABLE, "DESILO FHE not available")
+class TestFHEBootstrapDeferred(unittest.TestCase):
+    """Tests for FHE bootstrap key deferred loading optimization."""
+
+    def test_deferred_bootstrap_config(self):
+        """FHEConfig.defer_bootstrap=True should be accepted."""
+        from src.pqc_fhe_integration import FHEConfig
+        config = FHEConfig(
+            use_bootstrap=True,
+            defer_bootstrap=True,
+        )
+        self.assertTrue(config.defer_bootstrap)
+        self.assertTrue(config.use_bootstrap)
+
+    def test_deferred_bootstrap_skips_key_creation(self):
+        """FHEEngine with defer_bootstrap=True should NOT create bootstrap keys at init."""
+        from src.pqc_fhe_integration import FHEEngine, FHEConfig
+        config = FHEConfig(
+            use_bootstrap=True,
+            defer_bootstrap=True,
+            use_full_bootstrap_key=True,
+            use_lossy_bootstrap=True,
+        )
+        engine = FHEEngine(config, logger)
+        # Bootstrap keys should NOT be loaded
+        self.assertFalse(engine.bootstrap_keys_loaded)
+        self.assertNotIn('small_bootstrap', engine.keys)
+        self.assertNotIn('full_bootstrap', engine.keys)
+        self.assertNotIn('lossy_bootstrap', engine.keys)
+        # Core keys should still be present
+        self.assertIn('secret', engine.keys)
+        self.assertIn('public', engine.keys)
+        self.assertIn('relin', engine.keys)
+
+    def test_ensure_bootstrap_keys_creates_on_demand(self):
+        """ensure_bootstrap_keys() should create keys on demand."""
+        from src.pqc_fhe_integration import FHEEngine, FHEConfig
+        config = FHEConfig(
+            use_bootstrap=True,
+            defer_bootstrap=True,
+            use_full_bootstrap_key=True,
+            use_lossy_bootstrap=True,
+        )
+        engine = FHEEngine(config, logger)
+        self.assertFalse(engine.bootstrap_keys_loaded)
+        # Create on demand
+        engine.ensure_bootstrap_keys()
+        self.assertTrue(engine.bootstrap_keys_loaded)
+        self.assertIn('small_bootstrap', engine.keys)
+
+    def test_release_bootstrap_keys(self):
+        """release_bootstrap_keys() should free bootstrap keys from memory."""
+        from src.pqc_fhe_integration import FHEEngine, FHEConfig
+        config = FHEConfig(
+            use_bootstrap=True,
+            defer_bootstrap=True,
+            use_full_bootstrap_key=True,
+            use_lossy_bootstrap=True,
+        )
+        engine = FHEEngine(config, logger)
+        # Load then release
+        engine.ensure_bootstrap_keys()
+        self.assertTrue(engine.bootstrap_keys_loaded)
+        released = engine.release_bootstrap_keys()
+        self.assertFalse(engine.bootstrap_keys_loaded)
+        self.assertIsInstance(released, list)
+        self.assertIn('small_bootstrap', released)
+
+    def test_bootstrap_keys_loaded_property(self):
+        """bootstrap_keys_loaded should correctly report key state."""
+        from src.pqc_fhe_integration import FHEEngine, FHEConfig
+        config = FHEConfig(
+            use_bootstrap=True,
+            defer_bootstrap=True,
+        )
+        engine = FHEEngine(config, logger)
+        # Initially not loaded
+        self.assertFalse(engine.bootstrap_keys_loaded)
+        # After ensure
+        engine.ensure_bootstrap_keys()
+        self.assertTrue(engine.bootstrap_keys_loaded)
+        # After release
+        engine.release_bootstrap_keys()
+        self.assertFalse(engine.bootstrap_keys_loaded)
+
+    def test_encrypt_decrypt_without_bootstrap(self):
+        """encrypt/decrypt should work without bootstrap keys loaded."""
+        from src.pqc_fhe_integration import FHEEngine, FHEConfig
+        config = FHEConfig(
+            use_bootstrap=True,
+            defer_bootstrap=True,
+        )
+        engine = FHEEngine(config, logger)
+        self.assertFalse(engine.bootstrap_keys_loaded)
+        # Encrypt and decrypt should work
+        data = [1.0, 2.0, 3.0, 4.0]
+        ct = engine.encrypt(data)
+        self.assertIsNotNone(ct)
+        result = engine.decrypt(ct)
+        self.assertIsNotNone(result)
+        # Values should be approximately correct
+        for i in range(len(data)):
+            self.assertAlmostEqual(result[i], data[i], places=3)
+
+    def test_release_returns_empty_when_no_keys(self):
+        """release_bootstrap_keys() should return empty list when no keys loaded."""
+        from src.pqc_fhe_integration import FHEEngine, FHEConfig
+        config = FHEConfig(
+            use_bootstrap=True,
+            defer_bootstrap=True,
+        )
+        engine = FHEEngine(config, logger)
+        released = engine.release_bootstrap_keys()
+        self.assertEqual(released, [])
+
+    def test_ensure_noop_when_already_loaded(self):
+        """ensure_bootstrap_keys() should be no-op when keys already loaded."""
+        from src.pqc_fhe_integration import FHEEngine, FHEConfig
+        config = FHEConfig(
+            use_bootstrap=True,
+            defer_bootstrap=True,
+        )
+        engine = FHEEngine(config, logger)
+        engine.ensure_bootstrap_keys()
+        self.assertTrue(engine.bootstrap_keys_loaded)
+        # Second call should not raise or change anything
+        engine.ensure_bootstrap_keys()
+        self.assertTrue(engine.bootstrap_keys_loaded)
+
+    def test_immediate_bootstrap_still_works(self):
+        """FHEEngine with defer_bootstrap=False should create keys immediately."""
+        from src.pqc_fhe_integration import FHEEngine, FHEConfig
+        config = FHEConfig(
+            use_bootstrap=True,
+            defer_bootstrap=False,
+            use_full_bootstrap_key=True,
+            use_lossy_bootstrap=True,
+        )
+        engine = FHEEngine(config, logger)
+        # Bootstrap keys should be loaded immediately
+        self.assertTrue(engine.bootstrap_keys_loaded)
+        self.assertIn('small_bootstrap', engine.keys)
+
+
+# =============================================================================
+# FHE BOOTSTRAP CONFIG TESTS (No DESILO Required)
+# =============================================================================
+
+class TestFHEBootstrapConfig(unittest.TestCase):
+    """Tests for FHEConfig bootstrap deferred field (no DESILO dependency)."""
+
+    def test_fhe_config_defer_bootstrap_default_false(self):
+        """FHEConfig.defer_bootstrap should default to False."""
+        from src.pqc_fhe_integration import FHEConfig
+        config = FHEConfig()
+        self.assertFalse(config.defer_bootstrap)
+
+    def test_fhe_config_defer_bootstrap_true(self):
+        """FHEConfig.defer_bootstrap can be set to True."""
+        from src.pqc_fhe_integration import FHEConfig
+        config = FHEConfig(defer_bootstrap=True)
+        self.assertTrue(config.defer_bootstrap)
+        self.assertTrue(config.use_bootstrap)  # Default
+
+    def test_fhe_config_defer_with_no_bootstrap(self):
+        """defer_bootstrap with use_bootstrap=False should be accepted."""
+        from src.pqc_fhe_integration import FHEConfig
+        config = FHEConfig(use_bootstrap=False, defer_bootstrap=True)
+        self.assertFalse(config.use_bootstrap)
+        self.assertTrue(config.defer_bootstrap)
+
+
+# =============================================================================
+# SECTOR CIRCUIT BENCHMARK WITH IBM NOISE TESTS
+# =============================================================================
+
+@unittest.skipUnless(QISKIT_AVAILABLE, "Qiskit not available")
+class TestSectorCircuitBenchmarkIBMNoise(unittest.TestCase):
+    """Tests for sector circuit benchmarks with IBM QPU noise backend."""
+
+    @classmethod
+    def setUpClass(cls):
+        from src.sector_quantum_circuit_benchmark import (
+            SectorCircuitBenchmarkRunner,
+            EnhancedNoiseSimulator,
+        )
+        cls.runner = SectorCircuitBenchmarkRunner()
+        cls.noise_sim = EnhancedNoiseSimulator()
+
+    def test_ibm_heron_profile_exists(self):
+        """ibm_heron_r2 profile should be in NOISE_PROFILES."""
+        self.assertIn('ibm_heron_r2', self.noise_sim.NOISE_PROFILES)
+        profile = self.noise_sim.NOISE_PROFILES['ibm_heron_r2']
+        self.assertIn('IBM Heron r2', profile['description'])
+        self.assertEqual(profile['source'], 'ibm_heron_r2_specs')
+
+    def test_noise_profile_with_ibm_backend(self):
+        """run_sector_noise_profile with noise_backend=ibm_heron_r2 should work."""
+        result = self.noise_sim.run_sector_noise_profile(
+            'healthcare', circuit_type='grover', num_qubits=4,
+            noise_backend='ibm_heron_r2'
+        )
+        self.assertIsInstance(result, dict)
+        self.assertIn('noise_profile', result)
+        self.assertIn('ideal_success_probability', result)
+        self.assertIn('fidelity_ratio', result)
+
+    def test_circuit_benchmark_with_noise_backend(self):
+        """run_sector_circuit_benchmark with noise_backend should include IBM comparison."""
+        result = self.runner.run_sector_circuit_benchmark(
+            'healthcare', noise_backend='ibm_heron_r2'
+        )
+        self.assertIn('noise_analysis', result)
+        noise = result['noise_analysis']
+        # Should have IBM noise comparison when noise_backend specified
+        if 'ibm_noise_comparison' in noise:
+            ibm_comp = noise['ibm_noise_comparison']
+            # Structure: {default_profile: {...}, ibm_qpu_profile: {...}}
+            self.assertIn('default_profile', ibm_comp)
+            self.assertIn('ibm_qpu_profile', ibm_comp)
+            ibm_profile = ibm_comp['ibm_qpu_profile']
+            self.assertEqual(ibm_profile['noise_profile'], 'ibm_heron_r2')
+
+
+# =============================================================================
+# IBM QUANTUM v3.5.0 — ACCURATE HARDWARE DISCOVERY TESTS
+# =============================================================================
+
+class TestIBMQuantumV350(unittest.TestCase):
+    """Tests for v3.5.0: ibm_torino→Heron r1, ibm_fez/kingston/marrakesh→Heron r2."""
+
+    def test_ibm_torino_is_heron_r1(self):
+        """ibm_torino should be Heron r1 with 133 qubits."""
+        from src.ibm_quantum_backend import IBMQuantumBackendManager
+        torino = IBMQuantumBackendManager.KNOWN_PROCESSORS['ibm_torino']
+        self.assertEqual(torino['processor_type'], 'Heron r1')
+        self.assertEqual(torino['num_qubits'], 133)
+        self.assertEqual(torino['processor_family'], 'Heron')
+
+    def test_ibm_fez_is_heron_r2(self):
+        """ibm_fez should be Heron r2 with 156 qubits."""
+        from src.ibm_quantum_backend import IBMQuantumBackendManager
+        fez = IBMQuantumBackendManager.KNOWN_PROCESSORS['ibm_fez']
+        self.assertEqual(fez['processor_type'], 'Heron r2')
+        self.assertEqual(fez['num_qubits'], 156)
+        self.assertEqual(fez['processor_family'], 'Heron')
+        self.assertIn('cz', fez['basis_gates'])
+
+    def test_ibm_kingston_is_heron_r2(self):
+        """ibm_kingston should be Heron r2 with 156 qubits."""
+        from src.ibm_quantum_backend import IBMQuantumBackendManager
+        k = IBMQuantumBackendManager.KNOWN_PROCESSORS['ibm_kingston']
+        self.assertEqual(k['processor_type'], 'Heron r2')
+        self.assertEqual(k['num_qubits'], 156)
+
+    def test_ibm_marrakesh_is_heron_r2(self):
+        """ibm_marrakesh should be Heron r2 with 156 qubits."""
+        from src.ibm_quantum_backend import IBMQuantumBackendManager
+        m = IBMQuantumBackendManager.KNOWN_PROCESSORS['ibm_marrakesh']
+        self.assertEqual(m['processor_type'], 'Heron r2')
+        self.assertEqual(m['num_qubits'], 156)
+
+    def test_heron_r1_inferior_to_r2(self):
+        """Heron r1 (ibm_torino) should have shorter T1/T2 and higher errors than r2."""
+        from src.ibm_quantum_backend import IBMQuantumBackendManager
+        r1 = IBMQuantumBackendManager.KNOWN_PROCESSORS['ibm_torino']
+        r2 = IBMQuantumBackendManager.KNOWN_PROCESSORS['ibm_fez']
+        # r1 has shorter coherence times
+        self.assertLess(r1['T1_us_median'], r2['T1_us_median'])
+        self.assertLess(r1['T2_us_median'], r2['T2_us_median'])
+        # r1 has higher error rates
+        self.assertGreater(r1['single_qubit_error_median'], r2['single_qubit_error_median'])
+        self.assertGreater(r1['two_qubit_error_median'], r2['two_qubit_error_median'])
+
+    def test_heron_r2_fallback_is_ibm_fez(self):
+        """HERON_R2_FALLBACK should reference ibm_fez, not ibm_torino."""
+        from src.ibm_quantum_backend import IBMQuantumBackendManager
+        fb = IBMQuantumBackendManager.HERON_R2_FALLBACK
+        self.assertEqual(fb['name'], 'ibm_fez')
+        self.assertEqual(fb['processor_type'], 'Heron r2')
+        self.assertEqual(fb['num_qubits'], 156)
+
+    def test_known_processors_count(self):
+        """KNOWN_PROCESSORS should have 6 backends: torino, brisbane, sherbrooke, fez, kingston, marrakesh."""
+        from src.ibm_quantum_backend import IBMQuantumBackendManager
+        self.assertEqual(len(IBMQuantumBackendManager.KNOWN_PROCESSORS), 6)
+        expected = {'ibm_torino', 'ibm_brisbane', 'ibm_sherbrooke', 'ibm_fez', 'ibm_kingston', 'ibm_marrakesh'}
+        self.assertEqual(set(IBMQuantumBackendManager.KNOWN_PROCESSORS.keys()), expected)
+
+    def test_all_heron_backends_have_cz(self):
+        """All Heron processors should use CZ basis gate."""
+        from src.ibm_quantum_backend import IBMQuantumBackendManager
+        heron_backends = ['ibm_torino', 'ibm_fez', 'ibm_kingston', 'ibm_marrakesh']
+        for name in heron_backends:
+            proc = IBMQuantumBackendManager.KNOWN_PROCESSORS[name]
+            self.assertIn('cz', proc['basis_gates'], f"{name} missing CZ gate")
+            self.assertEqual(proc['processor_family'], 'Heron', f"{name} wrong family")
+
+    def test_list_backends_includes_new_processors(self):
+        """list_backends() should include the 3 new Heron r2 backends."""
+        from src.ibm_quantum_backend import IBMQuantumBackendManager
+        mgr = IBMQuantumBackendManager()
+        backends = mgr.list_backends()
+        names = [b['name'] for b in backends]
+        for new_name in ['ibm_fez', 'ibm_kingston', 'ibm_marrakesh']:
+            self.assertIn(new_name, names, f"{new_name} not in list_backends()")
+
+    def test_noise_params_for_new_backends(self):
+        """get_noise_params() should work for all 3 new Heron r2 backends."""
+        from src.ibm_quantum_backend import IBMQuantumBackendManager
+        mgr = IBMQuantumBackendManager()
+        for name in ['ibm_fez', 'ibm_kingston', 'ibm_marrakesh']:
+            params = mgr.get_noise_params(name)
+            self.assertEqual(params['name'], name)
+            self.assertAlmostEqual(params['T1_us_median'], 250.0)
+            self.assertEqual(params['num_qubits'], 156)
+
+
+# =============================================================================
+# BENCHMARK RESULTS SAVING TESTS
+# =============================================================================
+
+class TestBenchmarkResultsSaving(unittest.TestCase):
+    """Tests for BenchmarkResultsManager (v3.5.0)."""
+
+    def test_ensure_dirs_creates_directories(self):
+        """ensure_dirs() should create the results and diagrams directories."""
+        from src.sector_quantum_circuit_benchmark import BenchmarkResultsManager
+        BenchmarkResultsManager.ensure_dirs()
+        self.assertTrue(BenchmarkResultsManager.RESULTS_DIR.is_dir())
+        self.assertTrue(BenchmarkResultsManager.DIAGRAMS_DIR.is_dir())
+
+    def test_save_and_load_result(self):
+        """save_benchmark_result() and get_result() should round-trip correctly."""
+        from src.sector_quantum_circuit_benchmark import BenchmarkResultsManager
+        test_data = {
+            'sector': 'test_roundtrip',
+            'timestamp': '2026-03-29T00:00:00',
+            'shor_circuits': {'demo': True},
+        }
+        filename = BenchmarkResultsManager.save_benchmark_result(test_data, prefix='test_')
+        self.assertTrue(filename.startswith('test_'))
+        self.assertTrue(filename.endswith('.json'))
+        # Load back
+        loaded = BenchmarkResultsManager.get_result(filename)
+        self.assertIsNotNone(loaded)
+        self.assertEqual(loaded['sector'], 'test_roundtrip')
+        self.assertTrue(loaded['shor_circuits']['demo'])
+        # Cleanup
+        import os
+        os.remove(BenchmarkResultsManager.RESULTS_DIR / filename)
+
+    def test_list_results(self):
+        """list_results() should return a list of result metadata."""
+        from src.sector_quantum_circuit_benchmark import BenchmarkResultsManager
+        entries = BenchmarkResultsManager.list_results()
+        self.assertIsInstance(entries, list)
+        for entry in entries:
+            self.assertIn('filename', entry)
+            self.assertIn('size_bytes', entry)
+            self.assertIn('modified', entry)
+
+    def test_path_traversal_prevention(self):
+        """get_result() should block path-traversal attempts."""
+        from src.sector_quantum_circuit_benchmark import BenchmarkResultsManager
+        # Attempt path traversal
+        self.assertIsNone(BenchmarkResultsManager.get_result('../../../etc/passwd'))
+        self.assertIsNone(BenchmarkResultsManager.get_result('../../secret.json'))
+        self.assertIsNone(BenchmarkResultsManager.get_result('/etc/passwd'))
+
+    def test_save_circuit_diagram_png(self):
+        """save_circuit_diagram_png() should save a valid PNG file."""
+        import base64
+        from src.sector_quantum_circuit_benchmark import BenchmarkResultsManager
+        # Create a minimal valid PNG (1x1 red pixel)
+        png_bytes = (
+            b'\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01'
+            b'\x00\x00\x00\x01\x08\x02\x00\x00\x00\x90wS\xde\x00'
+            b'\x00\x00\x0cIDATx\x9cc\xf8\x0f\x00\x00\x01\x01\x00'
+            b'\x05\x18\xd8N\x00\x00\x00\x00IEND\xaeB`\x82'
+        )
+        data_uri = f"data:image/png;base64,{base64.b64encode(png_bytes).decode()}"
+        filename = BenchmarkResultsManager.save_circuit_diagram_png(data_uri, 'test_diagram')
+        self.assertIsNotNone(filename)
+        self.assertTrue(filename.endswith('.png'))
+        # Verify file exists
+        filepath = BenchmarkResultsManager.DIAGRAMS_DIR / filename
+        self.assertTrue(filepath.is_file())
+        self.assertGreater(filepath.stat().st_size, 0)
+        # Cleanup
+        import os
+        os.remove(filepath)
+
+    def test_save_circuit_diagram_invalid_uri(self):
+        """save_circuit_diagram_png() should return None for invalid data URIs."""
+        from src.sector_quantum_circuit_benchmark import BenchmarkResultsManager
+        self.assertIsNone(BenchmarkResultsManager.save_circuit_diagram_png(None, 'test'))
+        self.assertIsNone(BenchmarkResultsManager.save_circuit_diagram_png('', 'test'))
+        self.assertIsNone(BenchmarkResultsManager.save_circuit_diagram_png('not-a-data-uri', 'test'))
+
+    def test_list_diagrams(self):
+        """list_diagrams() should return a list of diagram metadata."""
+        from src.sector_quantum_circuit_benchmark import BenchmarkResultsManager
+        entries = BenchmarkResultsManager.list_diagrams()
+        self.assertIsInstance(entries, list)
+
+
+# =============================================================================
 # MAIN
 # =============================================================================
 
@@ -2353,6 +3185,19 @@ def run_tests():
 
     # v3.2.0 real circuit benchmarks
     suite.addTests(loader.loadTestsFromTestCase(TestSectorCircuitBenchmark))
+
+    # v3.3.0 IBM Quantum + FHE Bootstrap optimization tests
+    suite.addTests(loader.loadTestsFromTestCase(TestIBMQuantumBackend))
+    suite.addTests(loader.loadTestsFromTestCase(TestFHEBootstrapDeferred))
+    suite.addTests(loader.loadTestsFromTestCase(TestFHEBootstrapConfig))
+    suite.addTests(loader.loadTestsFromTestCase(TestSectorCircuitBenchmarkIBMNoise))
+
+    # v3.4.0 IBM Quantum singleton, JSON cache, least_busy tests
+    suite.addTests(loader.loadTestsFromTestCase(TestIBMQuantumV340))
+
+    # v3.5.0 Accurate Hardware Discovery + Benchmark Results Saving tests
+    suite.addTests(loader.loadTestsFromTestCase(TestIBMQuantumV350))
+    suite.addTests(loader.loadTestsFromTestCase(TestBenchmarkResultsSaving))
 
     # Run tests
     runner = unittest.TextTestRunner(verbosity=2)

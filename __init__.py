@@ -1,9 +1,6 @@
 """
-<<<<<<< HEAD
-PQC-FHE Integration Package v3.2.0
 =======
-PQC-FHE Integration Package v2.1.0
->>>>>>> origin/main
+PQC-FHE Integration Package v3.5.0
 ===================================
 
 Post-Quantum Cryptography and Fully Homomorphic Encryption integration library.
@@ -59,7 +56,6 @@ License: MIT
 Author: Amon (Quantum Computing Specialist)
 """
 
-<<<<<<< HEAD
 import json as _json
 import os as _os
 
@@ -70,12 +66,9 @@ def _load_version():
         with open(_version_file, 'r') as f:
             return _json.load(f)['version']
     except (FileNotFoundError, KeyError, _json.JSONDecodeError):
-        return "3.2.0"
+        return "3.5.0"
 
 __version__ = _load_version()
-=======
-__version__ = "2.1.0"
->>>>>>> origin/main
 __author__ = "PQC-FHE Portfolio"
 
 # Import main classes for convenient access
@@ -156,7 +149,6 @@ except ImportError as e:
     # Graceful degradation if dependencies missing
     import logging
     logging.warning(f"Some PQC-FHE components unavailable: {e}")
-<<<<<<< HEAD
 
     __all__ = ["__version__", "__author__"]
 
@@ -202,7 +194,3 @@ try:
     ])
 except ImportError:
     pass
-=======
-    
-    __all__ = ["__version__", "__author__"]
->>>>>>> origin/main
