@@ -63,11 +63,11 @@ td{padding:0.4rem 0.5rem;text-align:center;border-bottom:1px solid rgba(71,85,10
             <div class="stat-label">Industry Sectors</div>
         </div>
         <div class="card" style="text-align:center">
-            <div class="stat-number text-purple">25</div>
-            <div class="stat-label">API Endpoints</div>
+            <div class="stat-number text-purple">90</div>
+            <div class="stat-label">API Routes</div>
         </div>
         <div class="card" style="text-align:center">
-            <div class="stat-number text-green">178</div>
+            <div class="stat-number text-green">238</div>
             <div class="stat-label">Tests Passing</div>
         </div>
         <div class="card" style="text-align:center">
@@ -89,7 +89,7 @@ td{padding:0.4rem 0.5rem;text-align:center;border-bottom:1px solid rgba(71,85,10
                 <div>HIPAA | 50yr retention</div>
                 <div>RSA-2048, ECDSA-256</div>
                 <div>HNDL: <span class="text-red">45yr window</span></div>
-                <div>Urgency: <span class="mono text-red">82/100</span></div>
+                <div>Urgency: <span class="mono text-red">87/100</span></div>
             </div>
         </div>
         <div class="card">
@@ -98,7 +98,7 @@ td{padding:0.4rem 0.5rem;text-align:center;border-bottom:1px solid rgba(71,85,10
                 <div>CNSA 2.0 | 7yr retention</div>
                 <div>RSA-2048/4096, ECDSA-384</div>
                 <div>HNDL: <span class="text-yellow">2yr window</span></div>
-                <div>Urgency: <span class="mono text-yellow">70/100</span></div>
+                <div>Urgency: <span class="mono text-yellow">70.5/100</span></div>
             </div>
         </div>
         <div class="card glow">
@@ -272,7 +272,7 @@ td{padding:0.4rem 0.5rem;text-align:center;border-bottom:1px solid rgba(71,85,10
             <div style="background:rgba(255,255,255,0.1);padding:1rem;border-radius:0.5rem;">
                 <div style="font-size:2rem;font-weight:bold;color:#fbbf24;">5</div>
                 <div style="font-size:0.8rem;color:#94a3b8;">Basis Gates</div>
-                <div style="font-size:0.7rem;color:#64748b;margin-top:0.25rem;">cx, id, rz, sx, x</div>
+                <div style="font-size:0.7rem;color:#64748b;margin-top:0.25rem;">cz/ecr, id, rz, sx, x</div>
             </div>
             <div style="background:rgba(34,197,94,0.2);padding:1rem;border-radius:0.5rem;border:1px solid rgba(34,197,94,0.4);">
                 <div style="font-size:2rem;font-weight:bold;color:#4ade80;">GPU</div>
@@ -282,6 +282,66 @@ td{padding:0.4rem 0.5rem;text-align:center;border-bottom:1px solid rgba(71,85,10
         </div>
         <div style="font-size:0.75rem;color:#94a3b8;margin-top:0.75rem;text-align:center;">
             All 5 verifier classes use AerSimulator(device='GPU') with CPU fallback. Circuit diagrams via matplotlib base64 PNG API.
+        </div>
+    </div>
+
+    <!-- Section 4.2: IBM Quantum QPU Noise Integration -->
+    <div class="card" style="margin-top:1rem;background:linear-gradient(135deg,#1e293b,#1e3a5f);color:white;padding:1.5rem;border-radius:1rem;">
+        <h3 style="color:#60a5fa;margin-bottom:1rem;">IBM Quantum QPU Dynamic Discovery + Noise Integration (v3.5.0)</h3>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;text-align:center;">
+            <div style="background:rgba(168,85,247,0.15);padding:1rem;border-radius:0.5rem;border:1px solid rgba(168,85,247,0.3);">
+                <div style="font-size:1.8rem;font-weight:bold;color:#c084fc;">Heron r1</div>
+                <div style="font-size:0.8rem;color:#94a3b8;">ibm_torino (133Q)</div>
+                <div style="font-size:0.7rem;color:#64748b;margin-top:0.25rem;">T1=160&micro;s T2=100&micro;s</div>
+                <div style="font-size:0.7rem;color:#64748b;">CZ err=5.0e-3</div>
+            </div>
+            <div style="background:rgba(96,165,250,0.15);padding:1rem;border-radius:0.5rem;border:1px solid rgba(96,165,250,0.3);">
+                <div style="font-size:1.8rem;font-weight:bold;color:#60a5fa;">Heron r2</div>
+                <div style="font-size:0.8rem;color:#94a3b8;">ibm_fez/kingston/marrakesh (156Q)</div>
+                <div style="font-size:0.7rem;color:#64748b;margin-top:0.25rem;">T1=250&micro;s T2=150&micro;s</div>
+                <div style="font-size:0.7rem;color:#64748b;">CZ err=3.8e-3</div>
+            </div>
+            <div style="background:rgba(96,165,250,0.15);padding:1rem;border-radius:0.5rem;border:1px solid rgba(96,165,250,0.3);">
+                <div style="font-size:1.8rem;font-weight:bold;color:#38bdf8;">Eagle r3</div>
+                <div style="font-size:0.8rem;color:#94a3b8;">ibm_brisbane (127Q)</div>
+                <div style="font-size:0.7rem;color:#64748b;margin-top:0.25rem;">T1=200&micro;s T2=120&micro;s</div>
+                <div style="font-size:0.7rem;color:#64748b;">ECR err=7.5e-3</div>
+            </div>
+            <div style="background:rgba(34,197,94,0.15);padding:1rem;border-radius:0.5rem;border:1px solid rgba(34,197,94,0.3);">
+                <div style="font-size:1.8rem;font-weight:bold;color:#4ade80;">6</div>
+                <div style="font-size:0.8rem;color:#94a3b8;">QPU Backends</div>
+                <div style="font-size:0.7rem;color:#64748b;margin-top:0.25rem;">API &rarr; JSON Cache</div>
+                <div style="font-size:0.7rem;color:#64748b;">&rarr; KNOWN_PROCESSORS</div>
+            </div>
+        </div>
+        <div style="font-size:0.75rem;color:#94a3b8;margin-top:0.75rem;text-align:center;">
+            v3.5.0: ibm_torino corrected to Heron r1 (133Q). Added ibm_fez/kingston/marrakesh as Heron r2 (156Q). BenchmarkResultsManager saves results + circuit diagrams. 73 API endpoints. Dynamic QPU discovery via qiskit-ibm-runtime.
+        </div>
+    </div>
+
+    <!-- Section 4.3: FHE Bootstrap Memory Optimization -->
+    <div class="card" style="margin-top:1rem;background:linear-gradient(135deg,#1e293b,#3b1e5f);color:white;padding:1.5rem;border-radius:1rem;">
+        <h3 style="color:#c084fc;margin-bottom:1rem;">FHE Bootstrap Key Memory Optimization (v3.3.0)</h3>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;text-align:center;">
+            <div style="background:rgba(220,38,38,0.15);padding:1rem;border-radius:0.5rem;border:1px solid rgba(220,38,38,0.3);">
+                <div style="font-size:1.8rem;font-weight:bold;color:#f87171;">~28GB</div>
+                <div style="font-size:0.75rem;color:#94a3b8;">Before (startup)</div>
+            </div>
+            <div style="background:rgba(34,197,94,0.15);padding:1rem;border-radius:0.5rem;border:1px solid rgba(34,197,94,0.3);">
+                <div style="font-size:1.8rem;font-weight:bold;color:#4ade80;">~3.7GB</div>
+                <div style="font-size:0.75rem;color:#94a3b8;">After (core only)</div>
+            </div>
+            <div style="background:rgba(250,204,21,0.15);padding:1rem;border-radius:0.5rem;border:1px solid rgba(250,204,21,0.3);">
+                <div style="font-size:1.8rem;font-weight:bold;color:#fbbf24;">~24GB</div>
+                <div style="font-size:0.75rem;color:#94a3b8;">On-demand (temp)</div>
+            </div>
+            <div style="background:rgba(96,165,250,0.15);padding:1rem;border-radius:0.5rem;border:1px solid rgba(96,165,250,0.3);">
+                <div style="font-size:1.8rem;font-weight:bold;color:#60a5fa;">87%</div>
+                <div style="font-size:0.75rem;color:#94a3b8;">Memory saved</div>
+            </div>
+        </div>
+        <div style="font-size:0.75rem;color:#94a3b8;margin-top:0.75rem;text-align:center;">
+            Bootstrap keys (small 223MB + lossy 11.3GB + full 12.3GB) deferred until computation. Auto-created on first bootstrap call, released after use via API.
         </div>
     </div>
 
@@ -358,11 +418,146 @@ td{padding:0.4rem 0.5rem;text-align:center;border-bottom:1px solid rgba(71,85,10
         </div>
     </div>
 
+    <!-- Section 6: 2026 PQC Research Landscape -->
+    <div class="card" style="margin-top:1rem;background:linear-gradient(135deg,#1e293b,#1e4a3f);color:white;padding:1.5rem;border-radius:1rem;">
+        <h3 style="color:#34d399;margin-bottom:1rem;">2026 PQC Research Landscape (v3.5.0)</h3>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;text-align:center;">
+            <div style="background:rgba(239,68,68,0.15);padding:1rem;border-radius:0.5rem;border:1px solid rgba(239,68,68,0.3);">
+                <div style="font-size:1.5rem;font-weight:bold;color:#f87171;">~100K</div>
+                <div style="font-size:0.8rem;color:#94a3b8;">Physical Qubits</div>
+                <div style="font-size:0.7rem;color:#64748b;margin-top:0.25rem;">CRQC for RSA-2048</div>
+                <div style="font-size:0.7rem;color:#64748b;">(QLDPC, Feb 2026)</div>
+            </div>
+            <div style="background:rgba(34,197,94,0.15);padding:1rem;border-radius:0.5rem;border:1px solid rgba(34,197,94,0.3);">
+                <div style="font-size:1.5rem;font-weight:bold;color:#4ade80;">HQC</div>
+                <div style="font-size:0.8rem;color:#94a3b8;">5th NIST Algorithm</div>
+                <div style="font-size:0.7rem;color:#64748b;margin-top:0.25rem;">Code-based KEM</div>
+                <div style="font-size:0.7rem;color:#64748b;">Lattice diversification</div>
+            </div>
+            <div style="background:rgba(251,191,36,0.15);padding:1rem;border-radius:0.5rem;border:1px solid rgba(251,191,36,0.3);">
+                <div style="font-size:1.5rem;font-weight:bold;color:#fbbf24;">2030/2035</div>
+                <div style="font-size:0.8rem;color:#94a3b8;">NIST IR 8547</div>
+                <div style="font-size:0.7rem;color:#64748b;margin-top:0.25rem;">2030: Deprecated</div>
+                <div style="font-size:0.7rem;color:#64748b;">2035: Disallowed</div>
+            </div>
+        </div>
+        <div style="font-size:0.75rem;color:#94a3b8;margin-top:0.75rem;text-align:center;">
+            Hybrid TLS (ML-KEM + X25519) now default in Chrome/Firefox/Cloudflare. AI-assisted side-channel: single-trace ML-KEM key recovery (2026). MOZAIK: Open-source MPC+FHE IoT platform (Jan 2026).
+        </div>
+    </div>
+
+    <!-- Section 8: Infrastructure & Monitoring -->
+    <div class="section-title">8. Infrastructure & Monitoring Verification</div>
+    <div class="grid grid-2">
+        <div class="card">
+            <h3>Docker & Containerization</h3>
+            <table>
+                <thead><tr><th>Component</th><th>Detail</th><th>Status</th></tr></thead>
+                <tbody>
+                    <tr><td>Docker Image</td><td class="mono">pqc-fhe-api:v3.5.0 (420MB)</td><td class="text-green">Built</td></tr>
+                    <tr><td>Base Image</td><td class="mono">python:3.12-slim</td><td class="text-green">OK</td></tr>
+                    <tr><td>liboqs</td><td class="mono">0.14.0 (multi-stage build)</td><td class="text-green">OK</td></tr>
+                    <tr><td>Health Check</td><td class="mono">/health (30s interval)</td><td class="text-green">OK</td></tr>
+                    <tr><td>Non-root User</td><td class="mono">appuser</td><td class="text-green">OK</td></tr>
+                    <tr><td>GPU Image</td><td class="mono">Dockerfile.gpu (CUDA 12.2)</td><td class="text-green">Available</td></tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="card">
+            <h3>Monitoring & Orchestration</h3>
+            <table>
+                <thead><tr><th>Component</th><th>Detail</th><th>Status</th></tr></thead>
+                <tbody>
+                    <tr><td>Prometheus</td><td class="mono">/metrics endpoint</td><td class="text-green">Scraping</td></tr>
+                    <tr><td>Grafana</td><td class="mono">Dashboard + Data Source</td><td class="text-green">Connected</td></tr>
+                    <tr><td>Helm Chart</td><td class="mono">kubernetes/helm/pqc-fhe/</td><td class="text-green">Validated</td></tr>
+                    <tr><td>NetworkPolicy</td><td class="mono">Ingress/Egress rules</td><td class="text-green">OK</td></tr>
+                    <tr><td>RBAC</td><td class="mono">ServiceAccount + Role</td><td class="text-green">OK</td></tr>
+                    <tr><td>Docker Compose</td><td class="mono">API + Prometheus + Grafana</td><td class="text-green">Verified</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Section 8.1: Prometheus Metrics -->
+    <div class="card" style="margin-top:1rem;background:linear-gradient(135deg,#1e293b,#3b1e1e);color:white;padding:1.5rem;border-radius:1rem;">
+        <h3 style="color:#f87171;margin-bottom:1rem;">Prometheus Metrics Endpoint (/metrics)</h3>
+        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:1rem;text-align:center;">
+            <div style="background:rgba(255,255,255,0.1);padding:0.75rem;border-radius:0.5rem;">
+                <div style="font-size:1.5rem;font-weight:bold;color:#60a5fa;">Uptime</div>
+                <div style="font-size:0.7rem;color:#94a3b8;">process_uptime_seconds</div>
+            </div>
+            <div style="background:rgba(255,255,255,0.1);padding:0.75rem;border-radius:0.5rem;">
+                <div style="font-size:1.5rem;font-weight:bold;color:#4ade80;">Memory</div>
+                <div style="font-size:0.7rem;color:#94a3b8;">resident_memory_bytes</div>
+            </div>
+            <div style="background:rgba(255,255,255,0.1);padding:0.75rem;border-radius:0.5rem;">
+                <div style="font-size:1.5rem;font-weight:bold;color:#fbbf24;">HTTP</div>
+                <div style="font-size:0.7rem;color:#94a3b8;">requests_total / by_status</div>
+            </div>
+            <div style="background:rgba(255,255,255,0.1);padding:0.75rem;border-radius:0.5rem;">
+                <div style="font-size:1.5rem;font-weight:bold;color:#c084fc;">GC</div>
+                <div style="font-size:0.7rem;color:#94a3b8;">gc_objects_collected</div>
+            </div>
+            <div style="background:rgba(255,255,255,0.1);padding:0.75rem;border-radius:0.5rem;">
+                <div style="font-size:1.5rem;font-weight:bold;color:#f87171;">Info</div>
+                <div style="font-size:0.7rem;color:#94a3b8;">pqc_fhe_info{v=3.5.0}</div>
+            </div>
+        </div>
+        <div style="font-size:0.75rem;color:#94a3b8;margin-top:0.75rem;text-align:center;">
+            Zero-dependency Prometheus exposition format (text/plain; version=0.0.4). Thread-safe HTTP middleware tracks request count, duration, status codes. No prometheus_client library needed.
+        </div>
+    </div>
+
+    <!-- Section 9: Verification Results -->
+    <div class="section-title">9. v3.5.0 Verification Results</div>
+    <div class="grid grid-3">
+        <div class="card">
+            <h3>Test Suite</h3>
+            <div style="text-align:center;margin:1rem 0">
+                <div class="stat-number text-green">238</div>
+                <div class="stat-label">All Tests Passed (0 Failed)</div>
+            </div>
+            <div style="font-size:0.8rem;color:#94a3b8">
+                <div>TestIBMQuantumV350: 10 tests</div>
+                <div>TestBenchmarkResultsSaving: 7 tests</div>
+                <div>Shor probabilistic retry: max 3 attempts</div>
+                <div>pytest -q: 80 deprecation warnings only</div>
+            </div>
+        </div>
+        <div class="card">
+            <h3>Sector Benchmarks (5 Buttons)</h3>
+            <div style="font-size:0.8rem;color:#cbd5e1;line-height:1.8">
+                <div>1. Performance Benchmarks <span class="text-green">OK</span></div>
+                <div>2. Quantum Security Sim <span class="text-green">OK</span></div>
+                <div>3. All-Sector Comparison <span class="text-green">OK</span></div>
+                <div>4. Real Circuit Benchmark <span class="text-green">OK</span></div>
+                <div>5. All-Sector Circuit <span class="text-green">OK</span></div>
+            </div>
+            <div style="font-size:0.75rem;color:#94a3b8;margin-top:0.5rem">
+                All buttons verified with ibm_fez noise backend. 8 noise backend options in dropdown.
+            </div>
+        </div>
+        <div class="card">
+            <h3>Docker & Monitoring</h3>
+            <div style="font-size:0.8rem;color:#cbd5e1;line-height:1.8">
+                <div>Docker build: <span class="text-green">420MB</span></div>
+                <div>Prometheus target: <span class="text-green">UP</span></div>
+                <div>Grafana dashboard: <span class="text-green">Connected</span></div>
+                <div>Helm lint: <span class="text-green">Passed</span></div>
+                <div>Helm template: <span class="text-green">Rendered</span></div>
+            </div>
+            <div style="font-size:0.75rem;color:#94a3b8;margin-top:0.5rem">
+                docker-compose: API + Prometheus + Grafana (monitoring profile)
+            </div>
+        </div>
+    </div>
+
     <!-- Footer -->
     <div class="footer">
-        <p>PQC-FHE Integration Platform v3.2.0 | Real Qiskit Circuit Benchmarks | GPU-Accelerated (RTX PRO 6000 Blackwell 96GB cuStateVec)</p>
-        <p style="margin-top:0.5rem">References: NIST IR 8547, CNSA 2.0, Gidney 2025, Pinnacle 2026, Regev JACM 2025, IBM Quantum Learning</p>
-        <p style="margin-top:0.25rem;font-size:0.7rem">Generated: March 2026 | Qiskit v2.3.1 + Aer v0.17.2 (GPU) | 178 Tests | Pass Manager Level 2/3</p>
+        <p>PQC-FHE Integration Platform v3.5.0 | Accurate Hardware Discovery | IBM Quantum QPU Noise | Docker + Prometheus + Grafana | GPU-Accelerated (RTX PRO 6000 Blackwell 96GB cuStateVec)</p>
+        <p style="margin-top:0.5rem">References: NIST IR 8547, CNSA 2.0, Gidney 2025, Pinnacle 2026, Regev JACM 2025, HQC NIST 2025, MOZAIK 2026, IBM Quantum Learning, IBM Processor Types</p>
+        <p style="margin-top:0.25rem;font-size:0.7rem">Generated: March 2026 | Qiskit v2.3.1 + Aer v0.17.2 + ibm-runtime v0.46.1 (GPU) | 238 Tests | 90 Routes | Docker 420MB | Prometheus /metrics | Helm Chart | Pass Manager Level 2/3</p>
     </div>
 </div>
 </body>

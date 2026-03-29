@@ -1,0 +1,237 @@
+{
+  "timestamp": "2026-03-29T20:28:32.505090",
+  "connected": false,
+  "backends_count": 6,
+  "backends": [
+    {
+      "name": "ibm_torino",
+      "num_qubits": 133,
+      "processor_type": "Heron r1",
+      "processor_family": "Heron",
+      "basis_gates": [
+        "cz",
+        "id",
+        "rz",
+        "sx",
+        "x"
+      ],
+      "status": "cached",
+      "source": "json_cache",
+      "cache_timestamp": "2026-03-29T20:28:31.352380"
+    },
+    {
+      "name": "ibm_fez",
+      "num_qubits": 156,
+      "processor_type": "Heron r2",
+      "processor_family": "Heron",
+      "basis_gates": [
+        "cz",
+        "id",
+        "rz",
+        "sx",
+        "x"
+      ],
+      "status": "cached",
+      "source": "json_cache",
+      "cache_timestamp": "2026-03-29T20:28:31.352380"
+    },
+    {
+      "name": "ibm_kingston",
+      "num_qubits": 156,
+      "processor_type": "Heron r2",
+      "processor_family": "Heron",
+      "basis_gates": [
+        "cz",
+        "id",
+        "rz",
+        "sx",
+        "x"
+      ],
+      "status": "cached",
+      "source": "json_cache",
+      "cache_timestamp": "2026-03-29T20:28:31.352380"
+    },
+    {
+      "name": "ibm_marrakesh",
+      "num_qubits": 156,
+      "processor_type": "Heron r2",
+      "processor_family": "Heron",
+      "basis_gates": [
+        "cz",
+        "id",
+        "rz",
+        "sx",
+        "x"
+      ],
+      "status": "cached",
+      "source": "json_cache",
+      "cache_timestamp": "2026-03-29T20:28:31.352380"
+    },
+    {
+      "name": "ibm_brisbane",
+      "num_qubits": 127,
+      "processor_type": "Eagle r3",
+      "processor_family": "Eagle",
+      "basis_gates": [
+        "ecr",
+        "id",
+        "rz",
+        "sx",
+        "x"
+      ],
+      "status": "cached",
+      "source": "json_cache",
+      "cache_timestamp": "2026-03-29T20:28:31.352380"
+    },
+    {
+      "name": "ibm_sherbrooke",
+      "num_qubits": 127,
+      "processor_type": "Eagle r3",
+      "processor_family": "Eagle",
+      "basis_gates": [
+        "ecr",
+        "id",
+        "rz",
+        "sx",
+        "x"
+      ],
+      "status": "cached",
+      "source": "json_cache",
+      "cache_timestamp": "2026-03-29T20:28:31.352380"
+    }
+  ],
+  "noise_params": {
+    "ibm_torino": {
+      "name": "ibm_torino",
+      "processor_type": "Heron r1",
+      "processor_family": "Heron",
+      "num_qubits": 133,
+      "T1_us_median": 160.0,
+      "T2_us_median": 100.0,
+      "single_qubit_error_median": 0.0003,
+      "two_qubit_error_median": 0.005,
+      "readout_error_median": 0.015,
+      "gate_time_single_ns": 60.0,
+      "gate_time_cz_ns": 84.0,
+      "basis_gates": [
+        "cz",
+        "id",
+        "rz",
+        "sx",
+        "x"
+      ],
+      "source": "json_cache",
+      "timestamp": 1774783712.5041137
+    },
+    "ibm_fez": {
+      "name": "ibm_fez",
+      "processor_type": "Heron r2",
+      "processor_family": "Heron",
+      "num_qubits": 156,
+      "T1_us_median": 250.0,
+      "T2_us_median": 150.0,
+      "single_qubit_error_median": 0.00024,
+      "two_qubit_error_median": 0.0038,
+      "readout_error_median": 0.012,
+      "gate_time_single_ns": 60.0,
+      "gate_time_cz_ns": 84.0,
+      "basis_gates": [
+        "cz",
+        "id",
+        "rz",
+        "sx",
+        "x"
+      ],
+      "source": "json_cache",
+      "timestamp": 1774783712.504322
+    },
+    "ibm_kingston": {
+      "name": "ibm_kingston",
+      "processor_type": "Heron r2",
+      "processor_family": "Heron",
+      "num_qubits": 156,
+      "T1_us_median": 250.0,
+      "T2_us_median": 150.0,
+      "single_qubit_error_median": 0.00024,
+      "two_qubit_error_median": 0.00203,
+      "readout_error_median": 0.012,
+      "gate_time_single_ns": 60.0,
+      "gate_time_cz_ns": 84.0,
+      "basis_gates": [
+        "cz",
+        "id",
+        "rz",
+        "sx",
+        "x"
+      ],
+      "source": "json_cache",
+      "timestamp": 1774783712.504508
+    },
+    "ibm_marrakesh": {
+      "name": "ibm_marrakesh",
+      "processor_type": "Heron r2",
+      "processor_family": "Heron",
+      "num_qubits": 156,
+      "T1_us_median": 250.0,
+      "T2_us_median": 150.0,
+      "single_qubit_error_median": 0.00024,
+      "two_qubit_error_median": 0.0038,
+      "readout_error_median": 0.012,
+      "gate_time_single_ns": 60.0,
+      "gate_time_cz_ns": 84.0,
+      "basis_gates": [
+        "cz",
+        "id",
+        "rz",
+        "sx",
+        "x"
+      ],
+      "source": "json_cache",
+      "timestamp": 1774783712.5046842
+    },
+    "ibm_brisbane": {
+      "name": "ibm_brisbane",
+      "processor_type": "Eagle r3",
+      "processor_family": "Eagle",
+      "num_qubits": 127,
+      "T1_us_median": 200.0,
+      "T2_us_median": 120.0,
+      "single_qubit_error_median": 0.0003,
+      "two_qubit_error_median": 0.0075,
+      "readout_error_median": 0.015,
+      "gate_time_single_ns": 60.0,
+      "gate_time_cz_ns": 660.0,
+      "basis_gates": [
+        "ecr",
+        "id",
+        "rz",
+        "sx",
+        "x"
+      ],
+      "source": "json_cache",
+      "timestamp": 1774783712.5048473
+    },
+    "ibm_sherbrooke": {
+      "name": "ibm_sherbrooke",
+      "processor_type": "Eagle r3",
+      "processor_family": "Eagle",
+      "num_qubits": 127,
+      "T1_us_median": 220.0,
+      "T2_us_median": 130.0,
+      "single_qubit_error_median": 0.00028,
+      "two_qubit_error_median": 0.0068,
+      "readout_error_median": 0.013,
+      "gate_time_single_ns": 60.0,
+      "gate_time_cz_ns": 660.0,
+      "basis_gates": [
+        "ecr",
+        "id",
+        "rz",
+        "sx",
+        "x"
+      ],
+      "source": "json_cache",
+      "timestamp": 1774783712.5050054
+    }
+  }
+}

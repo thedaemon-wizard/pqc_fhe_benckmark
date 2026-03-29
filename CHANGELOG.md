@@ -2,6 +2,175 @@
 
 All notable changes to the PQC-FHE Integration Platform.
 
+## [3.5.0] - 2026-03-29
+
+### Fixed
+- **ibm_torino processor type**: Corrected from Heron R2 (156Q) to Heron r1 (133Q, Dec 2023)
+- **HERON_R2_FALLBACK**: Changed from `ibm_torino` to `ibm_fez` (actual Heron r2 processor)
+- **ibm_heron_r2 noise profile description**: Updated reference from ibm_torino to ibm_fez
+- **Exception fallback in API**: `ibm_torino/Heron R2/156Q` → `ibm_fez/Heron r2/156Q`
+- **`ibm_least_busy()` fallback**: Returns `ibm_fez` instead of `ibm_torino`
+- **Default `backend_name` parameter**: `noisy-ibm` endpoint defaults to `ibm_fez`
+- **WebUI dropdown**: "IBM Heron R2 (156Q, Fallback Profile)" → "IBM Heron r2 (156Q, ibm_fez Specs)"
+
+### Added
+- **3 new Heron r2 backends**: `ibm_fez`, `ibm_kingston`, `ibm_marrakesh` (156Q each) in KNOWN_PROCESSORS
+- **KNOWN_PROCESSORS expanded**: 3 → 6 backends (torino, brisbane, sherbrooke, fez, kingston, marrakesh)
+- **BenchmarkResultsManager**: New class for persistent storage of benchmark results and circuit diagrams
+  - `save_benchmark_result()`: Saves JSON to `data/benchmark_results/`
+  - `save_circuit_diagram_png()`: Saves PNG to `data/circuit_diagrams/`
+  - `list_results()` / `get_result()` / `list_diagrams()`: Query saved data
+  - Path-traversal prevention in `get_result()`
+- **Prometheus `/metrics` endpoint**: Zero-dependency Prometheus exposition format
+  - Thread-safe HTTP middleware tracks request count, duration, status codes
+  - Exposes: `process_uptime_seconds`, `process_resident_memory_bytes`, `python_gc_objects_collected`, `http_requests_total`, `http_requests_by_status_total`, `http_requests_by_method_total`, `http_request_duration_seconds_sum/count`, `pqc_fhe_ciphertexts_stored`, `pqc_fhe_info`
+  - No external dependency (no `prometheus_client` library)
+- **4 new API endpoints** (70 → 90 total routes)
+  - `GET /benchmarks/results` — List saved benchmark results
+  - `GET /benchmarks/results/{filename}` — Retrieve specific benchmark result
+  - `GET /benchmarks/diagrams` — List saved circuit diagrams
+  - `GET /metrics` — Prometheus-compatible metrics endpoint
+- **Circuit diagram auto-save**: Shor/Grover/ECC diagram endpoints now persist PNG files
+- **All-Sector circuit diagrams**: Button 5 now fetches and displays circuit diagrams (same as Button 4)
+- **17 new tests** (221 → 238 total)
+  - `TestIBMQuantumV350`: 10 tests for Heron r1/r2 correctness
+  - `TestBenchmarkResultsSaving`: 7 tests for result persistence
+- **2026 PQC research references**: NIST IR 8547 timeline, HQC, CRQC estimates, Hybrid TLS
+
+### Infrastructure & Monitoring
+- **Docker image**: `pqc-fhe-api:v3.5.0` (420MB) — multi-stage build with liboqs 0.14.0, pkg-config for OpenSSL detection
+- **Docker Compose monitoring profile**: API + Prometheus + Grafana with `--profile monitoring`
+- **Prometheus scrape targets**: `pqc-fhe-api:8000/metrics` — verified UP with 1ms scrape time
+- **Grafana data source**: Connected to Prometheus via Docker internal DNS (`pqc-fhe-prometheus:9090`)
+- **Grafana dashboard**: `process_uptime_seconds` visualization verified
+- **Grafana port**: Configurable via `${GRAFANA_PORT:-3000}` environment variable
+- **Helm chart validated**: `helm lint` passed, `helm template` renders 8 manifests (Deployment, Service, Ingress, HPA, NetworkPolicy, ServiceAccount, Role, RoleBinding)
+- **Dockerfile.gpu**: CUDA 12.2 + liboqs 0.14.0 multi-stage GPU build available
+
+### Changed
+- `ibm_torino` noise parameters: T1 250→160µs, T2 150→100µs, 1Q error 2.4e-4→3.0e-4, 2Q error 3.8e-3→5.0e-3
+- `run_sector_circuit_benchmark()` and `run_all_sectors()` now auto-save results to disk
+- Footer version: v3.4.0 → v3.5.0
+- **Shor factoring tests stabilized**: `test_shor_factoring_143` and `test_shor_factoring_221` now retry up to 3 attempts (probabilistic algorithm)
+
+## [3.4.0] - 2026-03-29
+
+### Added
+- **Dynamic QPU Backend Discovery** (`src/ibm_quantum_backend.py`)
+  - `startup_connect_and_discover()`: Server startup connects to IBM Quantum API and discovers all operational QPU backends
+  - JSON file cache (`data/ibm_backends_cache.json`): Persists dynamically fetched backend info for offline fallback
+  - 3-tier fallback chain: IBM Quantum Runtime API → JSON cache file → KNOWN_PROCESSORS (hardcoded)
+  - `get_least_busy()`: Automatic backend selection via `service.least_busy()` with fallback
+  - Module-level Singleton pattern: `get_ibm_manager()` shares cache across all API endpoints
+
+- **Processor-Specific basis_gates**
+  - Heron (ibm_torino): CZ-based `['cz', 'id', 'rz', 'sx', 'x']`
+  - Eagle (ibm_brisbane, ibm_sherbrooke): ECR-based `['ecr', 'id', 'rz', 'sx', 'x']`
+  - Nighthawk: CZ-based (Heron technology stack, grid topology)
+  - `PROCESSOR_BASIS_GATES` class constant for processor family → basis gates mapping
+  - `build_noise_model()` applies 2Q gate errors only on native gates (CZ or ECR)
+  - `_get_pass_manager_for_backend()` in NoiseAwareQuantumSimulator for correct transpilation
+
+- **All-Sector noise_backend Propagation**
+  - `run_all_sectors(noise_backend=)`: Propagates IBM QPU noise backend to all 5 sectors
+  - `POST /benchmarks/sector-all/circuit-benchmark?noise_backend=ibm_torino` API parameter
+  - WebUI "All-Sector Circuit Comparison" button now passes selected noise backend
+  - "IBM QPU Noise: ibm_torino" badge displayed in all-sector results
+
+- **New API Endpoints**
+  - `GET /quantum/ibm/least-busy` — Get least busy IBM QPU backend
+  - Background IBM Quantum connection in server `lifespan()` (daemon thread, non-blocking)
+
+- **WebUI Enhancements**
+  - Noise Backend dropdown shows all backends: API-sourced, JSON-cached, and fallback
+  - Backend labels include source indicator (Cached, Fallback)
+  - All 5 Sector Benchmark buttons verified functional with IBM QPU noise
+
+- **15 New Tests** (206 → 221 total)
+  - `TestIBMQuantumV340`: Singleton pattern, cache sharing, reset, startup discovery,
+    JSON cache save/load, least_busy fallback, basis_gates per processor,
+    PROCESSOR_BASIS_GATES mapping, noise profile basis_gates, status JSON cache info,
+    list_backends source/basis_gates fields, all-sectors noise_backend propagation,
+    noise model 2Q gate correctness
+
+### Changed
+- IBM endpoints now use `get_ibm_manager()` singleton instead of creating new instances
+- `_build_sector_noise_model()` uses basis_gates-aware 2Q gate list
+- `compare_with_ibm_noise()` uses backend-specific pass manager for correct transpilation
+- `get_noise_params()` fallback chain: API → JSON cache → KNOWN_PROCESSORS → Heron r2
+- `list_backends()` returns `processor_family`, `basis_gates`, and `source` fields
+
+## [3.3.0] - 2026-03-29
+
+### Added
+- **IBM Quantum QPU Noise Integration** (`src/ibm_quantum_backend.py`, NEW)
+  - `IBMQuantumBackendManager`: Dynamic QPU backend discovery from IBM Quantum Platform
+  - Real-time noise parameter fetching (T1/T2/gate errors/readout errors) via `qiskit-ibm-runtime`
+  - 1-hour parameter cache to reduce API calls
+  - Fallback to IBM Heron R2 (156Q, T1~250µs, CZ error ~3.8e-3) published specs when API unavailable
+  - Known processor database: ibm_torino (Heron R2), ibm_brisbane (Eagle r3), ibm_sherbrooke (Eagle r3)
+  - `build_noise_model()`: Constructs Qiskit NoiseModel from real QPU parameters (thermal relaxation + depolarizing + readout)
+  - `get_noise_profile_for_sector()`: EnhancedNoiseSimulator-compatible profile format output
+  - `.env` credentials: `IBM_QUANTUM_TOKEN`, `IBM_QUANTUM_INSTANCE`, `IBM_QUANTUM_CHANNEL`
+
+- **FHE Bootstrap Key Deferred Loading** (~24GB memory optimization)
+  - `FHEConfig.defer_bootstrap=True`: Skips bootstrap key creation at server startup
+  - `FHEEngine.ensure_bootstrap_keys()`: On-demand bootstrap key creation (~24GB: small 223MB + lossy 11.3GB + full 12.3GB)
+  - `FHEEngine.release_bootstrap_keys()`: Frees bootstrap keys from memory with `gc.collect()`
+  - `FHEEngine.bootstrap_keys_loaded` property: Reports current bootstrap key state
+  - Auto-bootstrap guards on `bootstrap()`, `lossy_bootstrap()`, `sign_bootstrap()` methods
+  - Server startup memory reduced: ~28GB → ~3.7GB (core keys only)
+
+- **IBM Heron R2 Noise Profile** in EnhancedNoiseSimulator
+  - `ibm_heron_r2` profile added to `NOISE_PROFILES` (6th profile)
+  - SQ error: 2.4e-4, 2Q error: 3.8e-3, T1: 250µs, T2: 150µs, readout: 1.2e-2
+  - `noise_backend` parameter on `run_sector_noise_profile()` and `run_sector_circuit_benchmark()`
+  - IBM QPU noise comparison in circuit benchmark results (default profile vs IBM QPU)
+
+- **IBM QPU Noise Comparison** in NoiseAwareQuantumSimulator
+  - `compare_with_ibm_noise()`: Ideal vs sector noise vs IBM QPU noise three-way comparison
+  - Circuit execution under IBM QPU NoiseModel for Grover and QFT circuits
+
+- **5 New API Endpoints**
+  - `GET /quantum/ibm/backends` — List available IBM QPU backends (API or fallback)
+  - `GET /quantum/ibm/backend/{name}/noise-params` — QPU noise parameters (T1/T2/errors)
+  - `POST /quantum/simulate/noisy-ibm` — IBM QPU noise model circuit simulation
+  - `GET /fhe/memory-status` — FHE bootstrap key memory status (loaded/deferred)
+  - `POST /fhe/release-bootstrap-keys` — Release bootstrap keys (~24GB freed)
+
+- **WebUI IBM Quantum Noise Backend Selector**
+  - Backend selector dropdown in circuit benchmark section
+  - Options: Default (Sector Profile), IBM Heron R2, dynamically discovered IBM QPU backends
+  - IBM QPU Noise Comparison display card in circuit results
+  - Noise Backend indicator when non-default backend selected
+
+- **28 New Tests** (178 → 206 total)
+  - `TestIBMQuantumBackend` (14): Manager init, fallback params, known processors, list backends,
+    noise params, unknown backend, profile compatibility, noise model build, Heron profile,
+    IBM noise comparison, status, cache mechanism
+  - `TestFHEBootstrapDeferred` (8): Deferred config, skip key creation, ensure on demand,
+    release keys, loaded property, encrypt/decrypt without bootstrap, release empty, no-op when loaded,
+    immediate bootstrap
+  - `TestFHEBootstrapConfig` (3): Default false, set true, defer with no bootstrap
+  - `TestSectorCircuitBenchmarkIBMNoise` (3): Heron profile exists, noise with IBM backend,
+    circuit benchmark with noise backend
+
+- **Agentic AI × PQC Research Documentation**
+  - wolfSSL SLIM (2025): MLS-based PQ channel binding for AI agents
+  - IETF draft-mpsb-agntcy-messaging-01: Multi-agent PQ messaging protocol
+  - IBM Pinnacle Architecture (Feb 2026): qLDPC codes, RSA-2048 ~100K physical qubits
+  - Google Quantum AI revised Q-Day to ~2029
+  - Q-Fusion diffusion model: Circuit layout from natural language
+  - NVIDIA GQE: GPU-accelerated quantum error decoding
+
+### Changed
+- `api/server.py`: `_get_fhe_engine()` now uses `defer_bootstrap=True` for both GPU and CPU modes
+- `api/server.py`: Server lifespan log shows bootstrap deferred/loaded status
+- `api/server.py`: `sector_circuit_benchmark` endpoint accepts `noise_backend` query parameter
+- `src/sector_quantum_circuit_benchmark.py`: `run_sector_noise_profile()` accepts `noise_backend` parameter
+- `src/sector_quantum_circuit_benchmark.py`: `_run_noise_analysis()` includes IBM noise comparison
+- `requirements.txt`: Added `qiskit-ibm-runtime>=0.37.0`
+
 ## [3.2.0] - 2026-03-20
 
 ### Fixed

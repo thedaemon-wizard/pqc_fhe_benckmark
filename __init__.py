@@ -1,5 +1,5 @@
 """
-PQC-FHE Integration Package v3.2.0
+PQC-FHE Integration Package v3.5.0
 ===================================
 
 Post-Quantum Cryptography and Fully Homomorphic Encryption integration library.
@@ -65,7 +65,7 @@ def _load_version():
         with open(_version_file, 'r') as f:
             return _json.load(f)['version']
     except (FileNotFoundError, KeyError, _json.JSONDecodeError):
-        return "3.2.0"
+        return "3.5.0"
 
 __version__ = _load_version()
 __author__ = "PQC-FHE Portfolio"

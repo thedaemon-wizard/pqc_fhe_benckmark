@@ -1,0 +1,643 @@
+{
+  "sector": "healthcare",
+  "sector_name": "Healthcare (HIPAA)",
+  "timestamp": "2026-03-29T17:51:21.526529",
+  "gpu_backend": {
+    "gpu_available": true,
+    "gpu_device": "NVIDIA RTX PRO 6000 Blackwell Workstation Edition",
+    "cuda_driver": "580.105.08",
+    "max_qubits_gpu": 32,
+    "max_qubits_cpu": 28,
+    "backend_type": "GPU (cuStateVec)",
+    "vram_gb": 96,
+    "ram_gb": 128,
+    "supported_methods": [
+      "statevector",
+      "matrix_product_state",
+      "statevector_gpu"
+    ]
+  },
+  "qiskit_available": true,
+  "noise_backend": "default",
+  "shor_circuits": {
+    "status": "completed",
+    "demo_circuits": [
+      {
+        "N": 15,
+        "factors_found": [
+          3,
+          5
+        ],
+        "success": true,
+        "num_qubits": 12,
+        "circuit_depth": 137,
+        "gate_count": {
+          "rz": 147,
+          "cx": 110,
+          "sx": 26,
+          "x": 8,
+          "measure": 8
+        },
+        "execution_time_ms": 27.021169662475586,
+        "shots": 4096,
+        "period_found": 2,
+        "optimization_info": {
+          "original_gates": 70,
+          "optimized_gates": 299,
+          "reduction_percent": -327.1,
+          "original_depth": 25,
+          "optimized_depth": 137,
+          "optimization_level": 2,
+          "method": "generate_preset_pass_manager",
+          "device": "GPU"
+        }
+      },
+      {
+        "N": 21,
+        "factors_found": [
+          3,
+          7
+        ],
+        "success": true,
+        "num_qubits": 15,
+        "circuit_depth": 5513,
+        "gate_count": {
+          "rz": 3173,
+          "cx": 2454,
+          "sx": 788,
+          "x": 111,
+          "measure": 10
+        },
+        "execution_time_ms": 368.49164962768555,
+        "shots": 4096,
+        "period_found": 6,
+        "optimization_info": {
+          "original_gates": 606,
+          "optimized_gates": 6536,
+          "reduction_percent": -978.5,
+          "original_depth": 293,
+          "optimized_depth": 5513,
+          "optimization_level": 2,
+          "method": "generate_preset_pass_manager",
+          "device": "GPU"
+        }
+      },
+      {
+        "N": 35,
+        "factors_found": [
+          5,
+          7
+        ],
+        "success": true,
+        "num_qubits": 18,
+        "circuit_depth": 13685,
+        "gate_count": {
+          "rz": 7871,
+          "cx": 6297,
+          "sx": 2070,
+          "x": 142,
+          "measure": 12
+        },
+        "execution_time_ms": 919.588565826416,
+        "shots": 4096,
+        "period_found": 6,
+        "optimization_info": {
+          "original_gates": 1350,
+          "optimized_gates": 16392,
+          "reduction_percent": -1114.2,
+          "original_depth": 744,
+          "optimized_depth": 13685,
+          "optimization_level": 2,
+          "method": "generate_preset_pass_manager",
+          "device": "GPU"
+        }
+      }
+    ],
+    "sector_rsa_keys": [
+      "RSA-2048",
+      "RSA-2048"
+    ],
+    "extrapolation": {
+      "rsa_keys": [
+        {
+          "algorithm": "RSA-2048",
+          "key_size": 2048,
+          "logical_qubits": 4098,
+          "physical_qubits_gidney2021": 20000000,
+          "physical_qubits_gidney2025": 1000000,
+          "physical_qubits_pinnacle2026": 100000,
+          "gate_count": 27000000000.0,
+          "hours_gidney2021": 8.0,
+          "hours_gidney2025": 3.5,
+          "hours_pinnacle2026": 0.5
+        },
+        {
+          "algorithm": "RSA-2048",
+          "key_size": 2048,
+          "logical_qubits": 4098,
+          "physical_qubits_gidney2021": 20000000,
+          "physical_qubits_gidney2025": 1000000,
+          "physical_qubits_pinnacle2026": 100000,
+          "gate_count": 27000000000.0,
+          "hours_gidney2021": 8.0,
+          "hours_gidney2025": 3.5,
+          "hours_pinnacle2026": 0.5
+        }
+      ]
+    },
+    "sector_implications": {
+      "demo_success_rate": "3/3",
+      "sector_uses_rsa": true,
+      "risk_level": "CRITICAL",
+      "message": "Shor factoring demonstrated on 3/3 demo numbers. Sector healthcare uses RSA — vulnerable to CRQC Shor attack. RSA-2048 requires ~4098 logical qubits (achievable by ~2031)."
+    }
+  },
+  "ecc_dlog_circuits": {
+    "status": "completed",
+    "demo_result": {
+      "field": "GF(2^4)",
+      "field_order": 16,
+      "multiplicative_group_order": 15,
+      "total_qubits": 12,
+      "counting_qubits": 8,
+      "work_qubits": 4,
+      "circuit_depth": 56,
+      "gate_count": {
+        "rz": 80,
+        "cx": 64,
+        "sx": 16,
+        "measure": 8,
+        "x": 1
+      },
+      "shots": 4096,
+      "period_found": null,
+      "success": false,
+      "top_measurements": [
+        {
+          "state": "00000000",
+          "count": 241,
+          "probability": 0.0588
+        },
+        {
+          "state": "11000100",
+          "count": 107,
+          "probability": 0.0261
+        },
+        {
+          "state": "00001111",
+          "count": 105,
+          "probability": 0.0256
+        },
+        {
+          "state": "10111100",
+          "count": 104,
+          "probability": 0.0254
+        },
+        {
+          "state": "11110001",
+          "count": 100,
+          "probability": 0.0244
+        }
+      ],
+      "execution_time_ms": 8.3,
+      "extrapolation": {
+        "P-256": {
+          "field_bits": 256,
+          "estimated_qubits": 2330,
+          "estimated_toffoli_gates": 126000000000.0,
+          "estimated_circuit_depth": 23300000000.0,
+          "qubit_formula": "9*256 + 2*ceil(log2(256)) + 10 = 2330",
+          "threat_year_optimistic": 2031,
+          "threat_year_moderate": 2035,
+          "current_status": "SAFE (requires CRQC)"
+        },
+        "P-384": {
+          "field_bits": 384,
+          "estimated_qubits": 3484,
+          "estimated_toffoli_gates": 419000000000.0,
+          "estimated_circuit_depth": 52100000000.0,
+          "qubit_formula": "9*384 + 2*ceil(log2(384)) + 10 = 3484",
+          "threat_year_optimistic": 2033,
+          "threat_year_moderate": 2037,
+          "current_status": "SAFE (requires CRQC)"
+        },
+        "Ed25519": {
+          "field_bits": 255,
+          "estimated_qubits": 2321,
+          "estimated_toffoli_gates": 124000000000.0,
+          "estimated_circuit_depth": 23000000000.0,
+          "qubit_formula": "9*255 + 2*ceil(log2(255)) + 10 = 2321",
+          "threat_year_optimistic": 2031,
+          "threat_year_moderate": 2035,
+          "current_status": "SAFE (requires CRQC)"
+        },
+        "secp256k1": {
+          "field_bits": 256,
+          "estimated_qubits": 2330,
+          "estimated_toffoli_gates": 126000000000.0,
+          "estimated_circuit_depth": 23300000000.0,
+          "qubit_formula": "9*256 + 2*ceil(log2(256)) + 10 = 2330",
+          "threat_year_optimistic": 2031,
+          "threat_year_moderate": 2035,
+          "current_status": "SAFE (requires CRQC)"
+        }
+      },
+      "research_basis": {
+        "roetteler_2017": "Quantum resource estimates for ECC discrete log",
+        "arxiv_2503_02984": "Exact binary field gate counts (March 2025)",
+        "qubit_formula": "9n + 2*ceil(log2(n)) + 10 for n-bit curve"
+      },
+      "optimization_info": {
+        "original_gates": 65,
+        "optimized_gates": 169,
+        "reduction_percent": -160.0,
+        "original_depth": 20,
+        "optimized_depth": 56,
+        "optimization_level": 2,
+        "method": "generate_preset_pass_manager",
+        "device": "GPU"
+      }
+    },
+    "sector_ecc_algorithms": [
+      "ECDSA-256"
+    ],
+    "sector_implications": {
+      "sector_ecc_count": 1,
+      "risk_level": "CRITICAL",
+      "message": "ECC discrete log demonstrated on GF(2^4). Sector healthcare uses ECDSA-256 — vulnerable to quantum ECDLP. P-256 requires ~2330 qubits."
+    }
+  },
+  "grover_circuits": {
+    "status": "completed",
+    "demo_circuits": [
+      {
+        "num_qubits": 4,
+        "search_space": 16,
+        "target_found": "0110",
+        "success": 30.7734375,
+        "target_probability": 1.92333984375,
+        "classical_probability": 0.0625,
+        "speedup_factor": 30.77,
+        "circuit_depth": 167,
+        "gate_count": {
+          "rz": 116,
+          "cx": 84,
+          "sx": 28,
+          "measure": 4
+        },
+        "optimal_iterations": 3,
+        "actual_iterations": 3,
+        "execution_time_ms": 174.15833473205566,
+        "optimization_info": {
+          "original_gates": 86,
+          "optimized_gates": 232,
+          "reduction_percent": -169.8,
+          "original_depth": 38,
+          "optimized_depth": 167,
+          "optimization_level": 3,
+          "method": "generate_preset_pass_manager",
+          "device": "GPU"
+        }
+      },
+      {
+        "num_qubits": 8,
+        "search_space": 256,
+        "target_found": "11101011",
+        "success": 256.0,
+        "target_probability": 1.0,
+        "classical_probability": 0.00390625,
+        "speedup_factor": 256.0,
+        "circuit_depth": 6798,
+        "gate_count": {
+          "rz": 5356,
+          "cx": 4320,
+          "sx": 920,
+          "x": 179,
+          "measure": 8
+        },
+        "optimal_iterations": 12,
+        "actual_iterations": 12,
+        "execution_time_ms": 2496.0954189300537,
+        "optimization_info": {
+          "original_gates": 520,
+          "optimized_gates": 10783,
+          "reduction_percent": -1973.7,
+          "original_depth": 122,
+          "optimized_depth": 6798,
+          "optimization_level": 3,
+          "method": "generate_preset_pass_manager",
+          "device": "GPU"
+        }
+      },
+      {
+        "num_qubits": 12,
+        "search_space": 4096,
+        "target_found": "101001100000",
+        "success": 4096.0,
+        "target_probability": 1.0,
+        "classical_probability": 0.000244140625,
+        "speedup_factor": 4096.0,
+        "circuit_depth": 110523,
+        "gate_count": {
+          "rz": 73875,
+          "cx": 56400,
+          "sx": 18612,
+          "x": 1149,
+          "measure": 12
+        },
+        "optimal_iterations": 50,
+        "actual_iterations": 50,
+        "execution_time_ms": 90456.16173744202,
+        "optimization_info": {
+          "original_gates": 3524,
+          "optimized_gates": 150048,
+          "reduction_percent": -4157.9,
+          "original_depth": 502,
+          "optimized_depth": 110523,
+          "optimization_level": 3,
+          "method": "generate_preset_pass_manager",
+          "device": "GPU"
+        }
+      }
+    ],
+    "sector_aes_algorithms": [
+      "AES-128",
+      "AES-256"
+    ],
+    "extrapolation": {
+      "128": {
+        "qubits": 2953,
+        "toffoli_gates": 22300000000.0,
+        "t_depth": 30,
+        "effective_security_bits": 64,
+        "full_depth_width_reduction": "45.2% (CCQC 2025)"
+      },
+      "256": {
+        "qubits": 6681,
+        "toffoli_gates": 151000000000.0,
+        "t_depth": 62,
+        "effective_security_bits": 128,
+        "full_depth_width_reduction": "~40% (estimated)"
+      }
+    },
+    "sector_implications": {
+      "uses_aes128": true,
+      "uses_aes256": true,
+      "risk_level": "MODERATE",
+      "message": "Grover search demonstrated on small spaces. AES-128 effective security drops to 64 bits under Grover. AES-256 remains secure (128-bit effective). Recommendation: Migrate to AES-256.",
+      "aes128_extrapolation": {
+        "qubits": 2953,
+        "toffoli_gates": 22300000000.0,
+        "t_depth": 30,
+        "effective_security_bits": 64,
+        "full_depth_width_reduction": "45.2% (CCQC 2025)"
+      },
+      "aes256_extrapolation": {
+        "qubits": 6681,
+        "toffoli_gates": 151000000000.0,
+        "t_depth": 62,
+        "effective_security_bits": 128,
+        "full_depth_width_reduction": "~40% (estimated)"
+      }
+    }
+  },
+  "regev_comparison": {
+    "comparisons": [
+      {
+        "bit_size": 8,
+        "shor": {
+          "qubits": 19,
+          "gates": 13824,
+          "circuit_depth": 192,
+          "quantum_runs": 1,
+          "classical_post_processing": 512,
+          "algorithm": "Shor (1994, Gidney-Ekera 2021 optimization)"
+        },
+        "regev": {
+          "qubits": 48,
+          "gates": 2262,
+          "circuit_depth": 22,
+          "quantum_runs": 2,
+          "classical_post_processing": 181,
+          "algorithm": "Regev (2023, JACM 2025)"
+        },
+        "gate_ratio": 0.164,
+        "qubit_ratio": 2.526,
+        "advantage": "Regev"
+      },
+      {
+        "bit_size": 16,
+        "shor": {
+          "qubits": 35,
+          "gates": 73728,
+          "circuit_depth": 1024,
+          "quantum_runs": 1,
+          "classical_post_processing": 4096,
+          "algorithm": "Shor (1994, Gidney-Ekera 2021 optimization)"
+        },
+        "regev": {
+          "qubits": 128,
+          "gates": 6400,
+          "circuit_depth": 64,
+          "quantum_runs": 4,
+          "classical_post_processing": 1024,
+          "algorithm": "Regev (2023, JACM 2025)"
+        },
+        "gate_ratio": 0.087,
+        "qubit_ratio": 3.657,
+        "advantage": "Regev"
+      },
+      {
+        "bit_size": 32,
+        "shor": {
+          "qubits": 67,
+          "gates": 368640,
+          "circuit_depth": 5120,
+          "quantum_runs": 1,
+          "classical_post_processing": 32768,
+          "algorithm": "Shor (1994, Gidney-Ekera 2021 optimization)"
+        },
+        "regev": {
+          "qubits": 320,
+          "gates": 18101,
+          "circuit_depth": 181,
+          "quantum_runs": 5,
+          "classical_post_processing": 5792,
+          "algorithm": "Regev (2023, JACM 2025)"
+        },
+        "gate_ratio": 0.049,
+        "qubit_ratio": 4.776,
+        "advantage": "Regev"
+      },
+      {
+        "bit_size": 2048,
+        "shor": {
+          "qubits": 4099,
+          "gates": 3321888768,
+          "circuit_depth": 46137344,
+          "quantum_runs": 1,
+          "classical_post_processing": 8589934592,
+          "algorithm": "Shor (1994, Gidney-Ekera 2021 optimization)"
+        },
+        "regev": {
+          "qubits": 45056,
+          "gates": 9268190,
+          "circuit_depth": 92681,
+          "quantum_runs": 45,
+          "classical_post_processing": 189812531,
+          "algorithm": "Regev (2023, JACM 2025)"
+        },
+        "gate_ratio": 0.003,
+        "qubit_ratio": 10.992,
+        "advantage": "Regev"
+      },
+      {
+        "bit_size": 4096,
+        "shor": {
+          "qubits": 8195,
+          "gates": 14495514624,
+          "circuit_depth": 201326592,
+          "quantum_runs": 1,
+          "classical_post_processing": 68719476736,
+          "algorithm": "Shor (1994, Gidney-Ekera 2021 optimization)"
+        },
+        "regev": {
+          "qubits": 98304,
+          "gates": 26214400,
+          "circuit_depth": 262144,
+          "quantum_runs": 64,
+          "classical_post_processing": 1073741824,
+          "algorithm": "Regev (2023, JACM 2025)"
+        },
+        "gate_ratio": 0.002,
+        "qubit_ratio": 11.996,
+        "advantage": "Regev"
+      }
+    ],
+    "summary": {
+      "regev_gate_advantage_threshold": 8,
+      "regev_qubit_overhead": "O(n log n) vs O(n)",
+      "regev_quantum_runs": "O(sqrt(n)) independent runs",
+      "practical_status_2026": "Regev offers asymptotically better gate complexity but requires sqrt(n) independent quantum runs and O(n log n) qubits. As of 2026, Shor remains the practical standard for CRQC threat modeling."
+    },
+    "references": {
+      "regev_2023": "Regev, O. \"An Efficient Quantum Factoring Algorithm\"",
+      "jacm_2025": "JACM Jan 2025 publication",
+      "journal_cryptology_2026": "Practical analysis of Regev's algorithm"
+    }
+  },
+  "noise_analysis": {
+    "status": "completed",
+    "grover_under_noise": {
+      "sector": "healthcare",
+      "noise_profile": "medical_iot",
+      "noise_description": "Medical IoT environment (hospital wireless, temperature variation)",
+      "circuit_type": "grover",
+      "num_qubits": 4,
+      "circuit_depth": 38,
+      "gate_count": {
+        "h": 40,
+        "x": 36,
+        "mcx": 6,
+        "measure": 4
+      },
+      "ideal_success_probability": 0.9614,
+      "sector_noise_probability": 0.0935,
+      "depolarizing_only_probability": 0.21,
+      "fidelity_ratio": 0.0973,
+      "degradation_pct": 90.3,
+      "noise_parameters": {
+        "single_qubit_error": 0.005,
+        "two_qubit_error": 0.025,
+        "readout_error": 0.01,
+        "T1_us": 50.0,
+        "T2_us": 30.0
+      },
+      "device": "GPU",
+      "execution_time_ms": 130.3,
+      "assessment": {
+        "severity": "CRITICAL",
+        "description": "Severe degradation — quantum advantage lost without error correction",
+        "noise_profile_used": "medical_iot",
+        "implication": "In healthcare sector (medical_iot noise): quantum attack fidelity = 9.7%. Error correction essential."
+      }
+    },
+    "qft_under_noise": {
+      "sector": "healthcare",
+      "noise_profile": "medical_iot",
+      "noise_description": "Medical IoT environment (hospital wireless, temperature variation)",
+      "circuit_type": "shor_qft",
+      "num_qubits": 4,
+      "circuit_depth": 16,
+      "gate_count": {
+        "cp": 12,
+        "h": 8,
+        "measure": 4,
+        "x": 1
+      },
+      "ideal_success_probability": 1.0,
+      "sector_noise_probability": 0.5852,
+      "depolarizing_only_probability": 0.6987,
+      "fidelity_ratio": 0.5852,
+      "degradation_pct": 41.5,
+      "noise_parameters": {
+        "single_qubit_error": 0.005,
+        "two_qubit_error": 0.025,
+        "readout_error": 0.01,
+        "T1_us": 50.0,
+        "T2_us": 30.0
+      },
+      "device": "GPU",
+      "execution_time_ms": 79.2,
+      "assessment": {
+        "severity": "HIGH",
+        "description": "Significant degradation — error correction required for reliable attack",
+        "noise_profile_used": "medical_iot",
+        "implication": "In healthcare sector (medical_iot noise): quantum attack fidelity = 58.5%. Attack effective even with noise."
+      }
+    },
+    "noise_profile": "medical_iot",
+    "noise_backend": "default"
+  },
+  "hndl_simulation": {
+    "sector": "healthcare",
+    "data_retention_years": 50,
+    "q_day_estimate": 2031,
+    "years_until_qday": 5,
+    "hndl_window_years": 45,
+    "hndl_risk": "CRITICAL",
+    "attack_sequence": [
+      "1. Data encrypted with RSA-2048",
+      "2. Adversary harvests ciphertext (ongoing)",
+      "3. CRQC available ~2031 (5 years)",
+      "4. Shor circuit breaks RSA/ECC (demo: N=15 factored in real circuit)",
+      "5. Plaintext recovered (data valid for 50 more years)"
+    ],
+    "shor_proof_of_concept": {
+      "N": 15,
+      "factors": [
+        3,
+        5
+      ],
+      "success": true,
+      "qubits_used": 12,
+      "execution_time_ms": 20.315885543823242
+    },
+    "recommendation": "Sector healthcare: HNDL window = 45 years. IMMEDIATE migration to PQC required.",
+    "reference": "arXiv:2603.01091 (March 2026): Open-source HNDL testbed"
+  },
+  "execution_summary": {
+    "total_execution_time_ms": 94688.6,
+    "circuits_executed": 10,
+    "sector_risk_assessment": {
+      "overall_risk": "CRITICAL",
+      "risk_factors": [
+        "RSA vulnerable to Shor",
+        "ECC vulnerable to discrete log attack",
+        "HNDL window: 45 years"
+      ],
+      "circuits_validated": true,
+      "recommendation": "Sector healthcare overall quantum risk: CRITICAL. Key risks: RSA vulnerable to Shor; ECC vulnerable to discrete log attack; HNDL window: 45 years. Immediate PQC migration recommended."
+    }
+  }
+}

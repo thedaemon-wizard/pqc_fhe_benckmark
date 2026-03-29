@@ -1774,6 +1774,15 @@
             const [circuitError, setCircuitError] = useState(null);
             const [allCircuitError, setAllCircuitError] = useState(null);
             const [circuitDiagrams, setCircuitDiagrams] = useState({});
+            const [ibmBackends, setIbmBackends] = useState([]);
+            const [selectedNoiseBackend, setSelectedNoiseBackend] = useState('default');
+
+            // Fetch IBM QPU backends on mount
+            useEffect(() => {
+                fetch(`${API_BASE}/quantum/ibm/backends`).then(r => r.json())
+                    .then(data => setIbmBackends(data.backends || []))
+                    .catch(() => setIbmBackends([]));
+            }, []);
 
             const sectors = [
                 { value: 'healthcare', label: 'Healthcare (HIPAA)', color: 'red' },
@@ -1814,7 +1823,8 @@
                 setCircuitLoading(true);
                 setCircuitError(null);
                 try {
-                    const data = await apiCall(`/benchmarks/sector/${sector}/circuit-benchmark`, { method: 'POST' }, 300000);
+                    const nbParam = selectedNoiseBackend !== 'default' ? `?noise_backend=${selectedNoiseBackend}` : '';
+                    const data = await apiCall(`/benchmarks/sector/${sector}/circuit-benchmark${nbParam}`, { method: 'POST' }, 300000);
                     setCircuitResults(data);
                     // Fetch circuit diagrams in parallel
                     fetchCircuitDiagrams();
@@ -1829,8 +1839,11 @@
                 setAllCircuitLoading(true);
                 setAllCircuitError(null);
                 try {
-                    const data = await apiCall(`/benchmarks/sector-all/circuit-benchmark`, { method: 'POST' }, 600000);
+                    const nbParam = selectedNoiseBackend !== 'default' ? `?noise_backend=${selectedNoiseBackend}` : '';
+                    const data = await apiCall(`/benchmarks/sector-all/circuit-benchmark${nbParam}`, { method: 'POST' }, 600000);
                     setAllCircuit(data);
+                    // Also fetch circuit diagrams (same as Button 4)
+                    fetchCircuitDiagrams();
                 } catch (e) {
                     console.error(e);
                     setAllCircuitError(e.message || 'All-sector circuit benchmark failed. Check server logs.');
@@ -1871,6 +1884,21 @@
                         <button onClick={runAllSectorQuantumSecurity} disabled={allQsLoading} className="bg-red-600 text-white px-6 py-3 rounded-xl font-medium hover:bg-red-700 disabled:opacity-50 transition">{allQsLoading ? (<span className="flex items-center gap-2"><svg className="animate-spin w-5 h-5" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>Analyzing All...</span>) : `All-Sector Comparison`}</button>
                         <button onClick={runCircuitBenchmark} disabled={circuitLoading} className="bg-emerald-600 text-white px-6 py-3 rounded-xl font-medium hover:bg-emerald-700 disabled:opacity-50 transition">{circuitLoading ? (<span className="flex items-center gap-2"><svg className="animate-spin w-5 h-5" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>Executing Circuits...</span>) : `Real Quantum Circuit Benchmark`}</button>
                         <button onClick={runAllSectorCircuit} disabled={allCircuitLoading} className="bg-cyan-600 text-white px-6 py-3 rounded-xl font-medium hover:bg-cyan-700 disabled:opacity-50 transition">{allCircuitLoading ? (<span className="flex items-center gap-2"><svg className="animate-spin w-5 h-5" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>All Sectors...</span>) : `All-Sector Circuit Comparison`}</button>
+                    </div>
+
+                    {/* IBM Quantum Noise Backend Selector */}
+                    <div className="flex items-center gap-3 justify-center bg-gradient-to-r from-indigo-50 to-blue-50 p-3 rounded-lg border border-indigo-100">
+                        <span className="text-sm font-medium text-indigo-700">Noise Backend:</span>
+                        <select value={selectedNoiseBackend} onChange={e => setSelectedNoiseBackend(e.target.value)} className="text-sm border border-indigo-200 rounded-lg px-3 py-1.5 bg-white text-gray-700 focus:ring-2 focus:ring-indigo-300 focus:border-indigo-300">
+                            <option value="default">Default (Sector Profile)</option>
+                            <option value="ibm_heron_r2">IBM Heron r2 (156Q, ibm_fez Specs)</option>
+                            {ibmBackends.map(b => (
+                                <option key={b.name} value={b.name}>{b.name} ({b.num_qubits}Q, {b.processor_type}{b.source === 'fallback_specs' ? ', Fallback' : ''}{b.source === 'json_cache' ? ', Cached' : ''})</option>
+                            ))}
+                        </select>
+                        {selectedNoiseBackend !== 'default' && (
+                            <span className="text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full">IBM QPU Noise</span>
+                        )}
                     </div>
 
                     {/* Performance Benchmark Results */}
@@ -2250,6 +2278,37 @@
                                     </div>
                                 )}
 
+                                {/* IBM QPU Noise Comparison */}
+                                {circuitResults.noise_analysis?.ibm_noise_comparison && (
+                                    <div className="bg-gradient-to-r from-indigo-50 to-blue-50 rounded-lg p-4 mb-4 border border-indigo-100">
+                                        <h5 className="font-bold text-indigo-800 mb-3">IBM QPU Noise Comparison</h5>
+                                        <div className="grid grid-cols-2 gap-3 text-xs">
+                                            <div className="bg-white p-3 rounded border">
+                                                <div className="font-bold text-gray-700 mb-2">Default Sector Profile</div>
+                                                <div className="space-y-1">
+                                                    <div className="flex justify-between"><span>Profile:</span><span className="font-mono">{circuitResults.noise_analysis.ibm_noise_comparison.default_profile.noise_profile}</span></div>
+                                                    <div className="flex justify-between"><span>Success:</span><span className="font-mono font-bold">{((circuitResults.noise_analysis.ibm_noise_comparison.default_profile.success_probability || 0) * 100).toFixed(1)}%</span></div>
+                                                    <div className="flex justify-between"><span>Fidelity:</span><span className="font-mono">{((circuitResults.noise_analysis.ibm_noise_comparison.default_profile.fidelity_ratio || 0) * 100).toFixed(1)}%</span></div>
+                                                </div>
+                                            </div>
+                                            <div className="bg-white p-3 rounded border border-indigo-200">
+                                                <div className="font-bold text-indigo-700 mb-2">IBM QPU: {circuitResults.noise_analysis.ibm_noise_comparison.ibm_qpu_profile.noise_profile}</div>
+                                                <div className="space-y-1">
+                                                    <div className="flex justify-between"><span>Success:</span><span className="font-mono font-bold text-indigo-600">{((circuitResults.noise_analysis.ibm_noise_comparison.ibm_qpu_profile.success_probability || 0) * 100).toFixed(1)}%</span></div>
+                                                    <div className="flex justify-between"><span>Fidelity:</span><span className="font-mono text-indigo-600">{((circuitResults.noise_analysis.ibm_noise_comparison.ibm_qpu_profile.fidelity_ratio || 0) * 100).toFixed(1)}%</span></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Noise Backend Indicator */}
+                                {circuitResults.noise_backend && circuitResults.noise_backend !== 'default' && (
+                                    <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-2 mb-4 text-xs text-center text-indigo-700">
+                                        Noise analysis used IBM QPU backend: <span className="font-bold">{circuitResults.noise_backend}</span>
+                                    </div>
+                                )}
+
                                 {/* HNDL Simulation */}
                                 {circuitResults.hndl_simulation && (
                                     <div className="bg-white rounded-lg p-4 mb-4">
@@ -2331,9 +2390,12 @@
                     {allCircuit && allCircuit.sectors && (
                         <div className="bg-gradient-to-r from-cyan-50 to-teal-50 border border-cyan-200 rounded-xl p-6">
                             <h4 className="text-lg font-bold text-cyan-900 mb-4">All-Sector Real Circuit Benchmark Comparison</h4>
-                            <div className="flex gap-2 mb-4">
+                            <div className="flex gap-2 mb-4 flex-wrap">
                                 <span className="bg-cyan-100 text-cyan-700 px-3 py-1 rounded text-xs font-medium">Total Circuits: {allCircuit.cross_sector_comparison?.total_circuits_executed}</span>
                                 <span className="bg-purple-100 text-purple-700 px-3 py-1 rounded text-xs font-medium">{((allCircuit.total_execution_time_ms ?? 0) / 1000).toFixed(1)}s</span>
+                                {allCircuit.noise_backend && allCircuit.noise_backend !== 'default' && (
+                                    <span className="bg-indigo-100 text-indigo-700 px-3 py-1 rounded text-xs font-medium">IBM QPU Noise: {allCircuit.noise_backend}</span>
+                                )}
                             </div>
                             {allCircuit.cross_sector_comparison?.risk_ranking && (
                                 <div className="bg-white rounded-lg p-4 mb-4">
@@ -2363,6 +2425,35 @@
                                     </div>
                                 ))}
                             </div>
+                            {/* Circuit Diagrams for All-Sector view */}
+                            {circuitDiagrams && (circuitDiagrams.shor || circuitDiagrams.grover || circuitDiagrams.ecc) && (
+                                <div className="mt-4 bg-white rounded-lg p-4 border">
+                                    <h5 className="font-bold text-gray-700 mb-3">Quantum Circuit Diagrams</h5>
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                        {circuitDiagrams.shor?.diagram && (
+                                            <div className="text-center">
+                                                <p className="text-xs font-medium text-gray-600 mb-1">Shor N=15 (a={circuitDiagrams.shor.circuit_info?.base_a})</p>
+                                                <img src={circuitDiagrams.shor.diagram} alt="Shor Circuit" className="w-full rounded border" />
+                                                <p className="text-xs text-gray-400 mt-1">{circuitDiagrams.shor.circuit_info?.num_qubits}Q, depth {circuitDiagrams.shor.circuit_info?.optimized_depth}</p>
+                                            </div>
+                                        )}
+                                        {circuitDiagrams.grover?.diagram && (
+                                            <div className="text-center">
+                                                <p className="text-xs font-medium text-gray-600 mb-1">Grover {circuitDiagrams.grover.circuit_info?.num_qubits}Q</p>
+                                                <img src={circuitDiagrams.grover.diagram} alt="Grover Circuit" className="w-full rounded border" />
+                                                <p className="text-xs text-gray-400 mt-1">depth {circuitDiagrams.grover.circuit_info?.optimized_depth}, {circuitDiagrams.grover.circuit_info?.optimal_iterations} iters</p>
+                                            </div>
+                                        )}
+                                        {circuitDiagrams.ecc?.diagram && (
+                                            <div className="text-center">
+                                                <p className="text-xs font-medium text-gray-600 mb-1">ECC DLog {circuitDiagrams.ecc.circuit_info?.field}</p>
+                                                <img src={circuitDiagrams.ecc.diagram} alt="ECC Circuit" className="w-full rounded border" />
+                                                <p className="text-xs text-gray-400 mt-1">{circuitDiagrams.ecc.circuit_info?.num_qubits}Q, depth {circuitDiagrams.ecc.circuit_info?.optimized_depth}</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     )}
 
@@ -2719,7 +2810,7 @@
                         </div>
                         
                         <div className="mt-8 text-center text-gray-500 text-sm">
-                            <p>PQC-FHE Integration v3.2.0 | liboqs + DESILO FHE + MPC-HE + Qiskit</p>
+                            <p>PQC-FHE Integration v3.5.0 | liboqs + DESILO FHE + MPC-HE + Qiskit + IBM Quantum</p>
                             <p className="mt-1"><a href="/docs" className="text-blue-500 hover:underline">API Docs</a> | <a href="https://github.com/open-quantum-safe/liboqs-python" target="_blank" className="text-blue-500 hover:underline ml-2">liboqs-python</a> | <a href="https://fhe.desilo.dev" target="_blank" className="text-blue-500 hover:underline ml-2">DESILO FHE</a></p>
                         </div>
                     </div>

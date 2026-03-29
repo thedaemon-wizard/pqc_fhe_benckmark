@@ -1,0 +1,9 @@
+dependencies:
+- name: redis
+  repository: https://charts.bitnami.com/bitnami
+  version: 18.19.4
+- name: prometheus
+  repository: https://prometheus-community.github.io/helm-charts
+  version: 25.30.2
+digest: sha256:a0f6516062bc5ff13a4022ceaea320445f1a98fecd885d62a548965d0c2310b1
+generated: "2026-03-29T16:59:17.185214001+09:00"

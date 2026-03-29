@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-PQC-FHE Integration REST API Server v3.2.0
+PQC-FHE Integration REST API Server v3.5.0
 ==========================================
 
 FastAPI-based REST API for Post-Quantum Cryptography and 
@@ -47,6 +47,7 @@ import secrets
 import hashlib
 import logging
 import subprocess
+import resource
 from pathlib import Path
 from typing import Optional, List, Dict, Any
 from datetime import datetime
@@ -63,7 +64,7 @@ def _load_api_version() -> str:
         with open(_vf, 'r') as f:
             return json.load(f)['version']
     except (FileNotFoundError, KeyError, json.JSONDecodeError):
-        return "3.2.0"
+        return "3.5.0"
 
 API_VERSION = _load_api_version()
 
@@ -73,7 +74,7 @@ os.environ['OQS_PERMIT_UNSUPPORTED_ARCHITECTURE'] = '1'
 from fastapi import FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.responses import FileResponse, HTMLResponse, PlainTextResponse
 from pydantic import BaseModel, Field
 
 # =============================================================================
@@ -265,24 +266,30 @@ def _check_liboqs_available() -> bool:
 
 
 def _get_fhe_engine():
-    """Lazy initialization of FHE engine with bootstrap enabled."""
+    """Lazy initialization of FHE engine with deferred bootstrap keys.
+
+    Bootstrap keys (~24GB) are NOT created at startup.
+    They are created on demand when bootstrap operations are needed,
+    and can be released via /fhe/release-bootstrap-keys endpoint.
+    """
     global _fhe_engine
-    
+
     if _fhe_engine is None:
         try:
             from pqc_fhe_integration import FHEEngine, FHEConfig
-            
-            # Enable bootstrap for unlimited computation depth
+
+            # Enable bootstrap but DEFER key creation (~24GB saved at startup)
             config = FHEConfig(
                 mode='gpu',
                 use_bootstrap=True,
+                defer_bootstrap=True,  # Deferred: keys created on demand
                 use_full_bootstrap_key=True,
                 use_lossy_bootstrap=True,
                 bootstrap_stage_count=3,
                 thread_count=512
             )
             _fhe_engine = FHEEngine(config, logger)
-            logger.info("FHE engine initialized successfully (bootstrap enabled)")
+            logger.info("FHE engine initialized (bootstrap DEFERRED, ~24GB saved)")
             logger.info(f"  Mode: gpu")
             logger.info(f"  Slot count: {_fhe_engine.engine.slot_count}")
         except Exception as e:
@@ -293,16 +300,17 @@ def _get_fhe_engine():
                 config = FHEConfig(
                     mode='cpu',
                     use_bootstrap=True,
-                    use_full_bootstrap_key=False,  # Save memory in CPU mode
+                    defer_bootstrap=True,  # Deferred in CPU mode too
+                    use_full_bootstrap_key=False,
                     use_lossy_bootstrap=True,
                     bootstrap_stage_count=3
                 )
                 _fhe_engine = FHEEngine(config, logger)
-                logger.info("FHE engine initialized in CPU mode (bootstrap enabled)")
+                logger.info("FHE engine initialized in CPU mode (bootstrap DEFERRED)")
             except Exception as e2:
                 logger.error(f"Failed to initialize FHE engine in CPU mode: {e2}")
                 _fhe_engine = None
-    
+
     return _fhe_engine
 
 
@@ -837,17 +845,47 @@ async def lifespan(app: FastAPI):
         logger.error("Install: git clone --depth=1 https://github.com/open-quantum-safe/liboqs-python && cd liboqs-python && pip install .")
     
     fhe = _get_fhe_engine()
-    fhe_status = "available (bootstrap enabled)" if fhe else "unavailable"
+    if fhe:
+        bootstrap_status = "deferred" if fhe.config.defer_bootstrap else "loaded"
+        fhe_status = f"available (bootstrap {bootstrap_status})"
+    else:
+        fhe_status = "unavailable"
     logger.info(f"FHE engine: {fhe_status}")
     
+    # Ensure benchmark results / circuit diagram directories exist
+    try:
+        from src.sector_quantum_circuit_benchmark import BenchmarkResultsManager
+        BenchmarkResultsManager.ensure_dirs()
+        logger.info("Benchmark results directories ready")
+    except Exception as e:
+        logger.warning("BenchmarkResultsManager init: %s", e)
+
+    # Background IBM Quantum startup connection + discovery
+    import threading
+    def _ibm_startup():
+        try:
+            from src.ibm_quantum_backend import get_ibm_manager
+            mgr = get_ibm_manager()
+            result = mgr.startup_connect_and_discover()
+            logger.info(
+                f"IBM Quantum: {result['backends_discovered']} backends discovered "
+                f"(source={result['source']}, connected={result['connected']})"
+            )
+        except Exception as e:
+            logger.warning(f"IBM Quantum startup failed (non-critical): {e}")
+
+    ibm_thread = threading.Thread(target=_ibm_startup, daemon=True)
+    ibm_thread.start()
+    logger.info("IBM Quantum backend discovery started in background thread")
+
     logger.info("=" * 60)
     logger.info("Server ready at http://127.0.0.1:8000")
     logger.info("Web UI at http://127.0.0.1:8000/ui")
     logger.info("API docs at http://127.0.0.1:8000/docs")
     logger.info("=" * 60)
-    
+
     yield
-    
+
     logger.info("Shutting down...")
 
 
@@ -919,6 +957,43 @@ app.add_middleware(
 
 
 # =============================================================================
+# PROMETHEUS METRICS (lightweight, no external dependency)
+# =============================================================================
+import threading as _metrics_threading
+
+_METRICS_LOCK = _metrics_threading.Lock()
+_METRICS_START_TIME = time.time()
+_METRICS = {
+    "http_requests_total": 0,
+    "http_requests_by_status": {},   # {"200": count, "404": count, ...}
+    "http_requests_by_method": {},   # {"GET": count, "POST": count, ...}
+    "http_request_duration_seconds_sum": 0.0,
+    "http_request_duration_seconds_count": 0,
+}
+
+
+@app.middleware("http")
+async def metrics_middleware(request, call_next):
+    """Track HTTP request metrics for Prometheus scraping."""
+    if request.url.path == "/metrics":
+        return await call_next(request)
+    start = time.time()
+    response = await call_next(request)
+    duration = time.time() - start
+    with _METRICS_LOCK:
+        _METRICS["http_requests_total"] += 1
+        status_key = str(response.status_code)
+        _METRICS["http_requests_by_status"][status_key] = \
+            _METRICS["http_requests_by_status"].get(status_key, 0) + 1
+        method = request.method
+        _METRICS["http_requests_by_method"][method] = \
+            _METRICS["http_requests_by_method"].get(method, 0) + 1
+        _METRICS["http_request_duration_seconds_sum"] += duration
+        _METRICS["http_request_duration_seconds_count"] += 1
+    return response
+
+
+# =============================================================================
 # WEB UI ROUTES
 # =============================================================================
 
@@ -947,6 +1022,88 @@ async def web_ui():
             detail="Web UI not found. Please ensure web_ui/index.html exists."
         )
     return FileResponse(ui_path, media_type="text/html")
+
+
+# =============================================================================
+# PROMETHEUS METRICS ENDPOINT
+# =============================================================================
+
+@app.get("/metrics", tags=["Monitoring"], response_class=PlainTextResponse)
+async def prometheus_metrics():
+    """
+    Prometheus-compatible metrics endpoint.
+
+    Returns metrics in Prometheus exposition format (text/plain).
+    No external dependency required — pure Python implementation.
+    """
+    import gc
+    lines = []
+    uptime = time.time() - _METRICS_START_TIME
+
+    # Process info
+    lines.append("# HELP process_uptime_seconds Time since server started")
+    lines.append("# TYPE process_uptime_seconds gauge")
+    lines.append(f"process_uptime_seconds {uptime:.2f}")
+
+    # Memory usage (RSS)
+    try:
+        ru = resource.getrusage(resource.RUSAGE_SELF)
+        rss_bytes = ru.ru_maxrss * 1024  # Linux: kilobytes → bytes
+        lines.append("# HELP process_resident_memory_bytes Resident memory size in bytes")
+        lines.append("# TYPE process_resident_memory_bytes gauge")
+        lines.append(f"process_resident_memory_bytes {rss_bytes}")
+    except Exception:
+        pass
+
+    # Python GC stats
+    gc_counts = gc.get_count()
+    lines.append("# HELP python_gc_objects_collected Total collected objects per generation")
+    lines.append("# TYPE python_gc_objects_collected gauge")
+    for i, count in enumerate(gc_counts):
+        lines.append(f'python_gc_objects_collected{{generation="{i}"}} {count}')
+
+    with _METRICS_LOCK:
+        # HTTP request totals
+        lines.append("# HELP http_requests_total Total HTTP requests")
+        lines.append("# TYPE http_requests_total counter")
+        lines.append(f"http_requests_total {_METRICS['http_requests_total']}")
+
+        # By status code
+        lines.append("# HELP http_requests_by_status_total HTTP requests by status code")
+        lines.append("# TYPE http_requests_by_status_total counter")
+        for code, count in sorted(_METRICS["http_requests_by_status"].items()):
+            lines.append(f'http_requests_by_status_total{{status="{code}"}} {count}')
+
+        # By method
+        lines.append("# HELP http_requests_by_method_total HTTP requests by method")
+        lines.append("# TYPE http_requests_by_method_total counter")
+        for method, count in sorted(_METRICS["http_requests_by_method"].items()):
+            lines.append(f'http_requests_by_method_total{{method="{method}"}} {count}')
+
+        # Request duration
+        lines.append("# HELP http_request_duration_seconds Total request processing time")
+        lines.append("# TYPE http_request_duration_seconds summary")
+        lines.append(f"http_request_duration_seconds_sum {_METRICS['http_request_duration_seconds_sum']:.6f}")
+        lines.append(f"http_request_duration_seconds_count {_METRICS['http_request_duration_seconds_count']}")
+
+    # Ciphertext count
+    try:
+        ct_count = len(_ciphertext_store) if '_ciphertext_store' in dir() else 0
+    except Exception:
+        ct_count = 0
+    lines.append("# HELP pqc_fhe_ciphertexts_stored Current stored ciphertexts")
+    lines.append("# TYPE pqc_fhe_ciphertexts_stored gauge")
+    lines.append(f"pqc_fhe_ciphertexts_stored {ct_count}")
+
+    # App info
+    lines.append("# HELP pqc_fhe_info Application version info")
+    lines.append("# TYPE pqc_fhe_info gauge")
+    lines.append(f'pqc_fhe_info{{version="{API_VERSION}"}} 1')
+
+    return PlainTextResponse(
+        "\n".join(lines) + "\n",
+        media_type="text/plain; version=0.0.4; charset=utf-8"
+    )
 
 
 # =============================================================================
@@ -3807,7 +3964,7 @@ async def gl_private_inference_info():
 # =============================================================================
 
 @app.post("/benchmarks/sector/{sector}/circuit-benchmark", tags=["Quantum Circuit Benchmarks"])
-async def sector_circuit_benchmark(sector: str):
+async def sector_circuit_benchmark(sector: str, noise_backend: Optional[str] = None):
     """
     Run real Qiskit quantum circuit benchmarks for a specific sector.
 
@@ -3817,11 +3974,14 @@ async def sector_circuit_benchmark(sector: str):
     Includes: Shor factoring (N=15,21,35), ECC dlog (GF(2^4)),
     Grover search (4-16 qubits), Regev vs Shor comparison,
     sector noise analysis, and HNDL simulation.
+
+    Optional noise_backend parameter: 'ibm_fez', 'ibm_heron_r2', etc.
+    for IBM QPU noise comparison.
     """
     try:
         from src.sector_quantum_circuit_benchmark import SectorCircuitBenchmarkRunner
         runner = SectorCircuitBenchmarkRunner()
-        return runner.run_sector_circuit_benchmark(sector)
+        return runner.run_sector_circuit_benchmark(sector, noise_backend=noise_backend)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
@@ -3830,17 +3990,19 @@ async def sector_circuit_benchmark(sector: str):
 
 
 @app.post("/benchmarks/sector-all/circuit-benchmark", tags=["Quantum Circuit Benchmarks"])
-async def all_sector_circuit_benchmark():
+async def all_sector_circuit_benchmark(noise_backend: Optional[str] = None):
     """
     Run real Qiskit quantum circuit benchmarks for all 5 sectors.
 
     Returns comprehensive cross-sector comparison with risk ranking,
     total circuits executed, and migration priority ordering.
+
+    Optional noise_backend parameter applies IBM QPU noise model to all sectors.
     """
     try:
         from src.sector_quantum_circuit_benchmark import SectorCircuitBenchmarkRunner
         runner = SectorCircuitBenchmarkRunner()
-        return runner.run_all_sectors()
+        return runner.run_all_sectors(noise_backend=noise_backend)
     except Exception as e:
         logger.error("All-sector circuit benchmark failed: %s", e)
         raise HTTPException(status_code=500, detail=str(e))
@@ -3942,6 +4104,168 @@ async def quantum_gpu_status():
 
 
 # =============================================================================
+# IBM QUANTUM QPU BACKEND ENDPOINTS
+# =============================================================================
+
+@app.get("/quantum/ibm/backends", tags=["IBM Quantum"])
+async def ibm_quantum_backends():
+    """
+    List available IBM Quantum QPU backends with noise info.
+
+    Returns list of backends (from API, JSON cache, or fallback specifications).
+    Includes: name, num_qubits, processor_type, basis_gates, status, source.
+    """
+    try:
+        from src.ibm_quantum_backend import get_ibm_manager
+        mgr = get_ibm_manager()
+        backends = mgr.list_backends()
+        return {
+            'backends': backends,
+            'connected': mgr.connected,
+            'status': mgr.get_status(),
+        }
+    except Exception as e:
+        logger.error("IBM Quantum backends listing failed: %s", e)
+        return {
+            'backends': [
+                {'name': 'ibm_fez', 'num_qubits': 156,
+                 'processor_type': 'Heron r2', 'status': 'fallback',
+                 'source': 'fallback_specs'},
+            ],
+            'connected': False,
+            'error': str(e),
+        }
+
+
+@app.get("/quantum/ibm/backend/{name}/noise-params", tags=["IBM Quantum"])
+async def ibm_quantum_noise_params(name: str):
+    """
+    Get noise parameters (T1/T2/gate errors/readout errors) for an IBM QPU.
+
+    Returns real-time or fallback noise parameters including:
+    T1_us_median, T2_us_median, single_qubit_error_median,
+    two_qubit_error_median, readout_error_median, gate times, basis_gates.
+    """
+    try:
+        from src.ibm_quantum_backend import get_ibm_manager
+        mgr = get_ibm_manager()
+        params = mgr.get_noise_params(name)
+        profile = mgr.get_noise_profile_for_sector(name)
+        return {
+            'backend_name': name,
+            'noise_params': params,
+            'simulator_profile': profile,
+        }
+    except Exception as e:
+        logger.error("IBM noise params fetch failed for %s: %s", name, e)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/quantum/simulate/noisy-ibm", tags=["IBM Quantum"])
+async def noisy_ibm_simulation(
+    num_qubits: int = 4,
+    circuit_type: str = "grover",
+    backend_name: str = "ibm_fez",
+):
+    """
+    Run noise-aware quantum circuit simulation with IBM QPU noise model.
+
+    Compares ideal vs depolarizing vs IBM QPU realistic noise.
+    Three-way comparison: ideal, standard noise, IBM hardware noise.
+    """
+    try:
+        from src.quantum_verification import NoiseAwareQuantumSimulator
+        sim = NoiseAwareQuantumSimulator()
+        return sim.compare_with_ibm_noise(circuit_type, num_qubits, backend_name)
+    except ImportError as e:
+        raise HTTPException(status_code=503, detail=f"Qiskit not available: {e}")
+    except Exception as e:
+        logger.error("IBM noisy simulation failed: %s", e)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/quantum/ibm/least-busy", tags=["IBM Quantum"])
+async def ibm_least_busy(min_qubits: int = 5):
+    """
+    Get the least busy IBM Quantum QPU backend.
+
+    Uses IBM Quantum Runtime service.least_busy() when connected,
+    falls back to first known processor otherwise.
+    """
+    try:
+        from src.ibm_quantum_backend import get_ibm_manager
+        mgr = get_ibm_manager()
+        name = mgr.get_least_busy(min_num_qubits=min_qubits)
+        return {
+            'backend': name,
+            'connected': mgr.connected,
+            'min_qubits_requested': min_qubits,
+        }
+    except Exception as e:
+        logger.error("IBM least_busy failed: %s", e)
+        return {
+            'backend': 'ibm_fez',
+            'connected': False,
+            'error': str(e),
+        }
+
+
+# =============================================================================
+# FHE MEMORY MANAGEMENT ENDPOINTS
+# =============================================================================
+
+@app.get("/fhe/memory-status", tags=["FHE"])
+async def fhe_memory_status():
+    """
+    Get FHE engine memory status.
+
+    Reports whether bootstrap keys (~24GB) are loaded in memory or deferred.
+    Useful for monitoring server memory consumption.
+    """
+    fhe = _get_fhe_engine()
+    if fhe is None:
+        return {
+            'fhe_available': False,
+            'bootstrap_keys_loaded': False,
+            'bootstrap_deferred': False,
+            'estimated_memory_gb': 0.0,
+        }
+
+    bootstrap_loaded = fhe.bootstrap_keys_loaded
+    return {
+        'fhe_available': True,
+        'bootstrap_keys_loaded': bootstrap_loaded,
+        'bootstrap_deferred': fhe.config.defer_bootstrap,
+        'estimated_core_keys_memory_gb': 3.7,
+        'estimated_bootstrap_memory_gb': 24.0 if bootstrap_loaded else 0.0,
+        'estimated_total_memory_gb': 27.7 if bootstrap_loaded else 3.7,
+        'mode': fhe.config.mode,
+        'use_bootstrap': fhe.config.use_bootstrap,
+    }
+
+
+@app.post("/fhe/release-bootstrap-keys", tags=["FHE"])
+async def fhe_release_bootstrap_keys():
+    """
+    Release bootstrap keys to free ~24GB memory.
+
+    After release, bootstrap operations will auto-recreate keys on next use.
+    Call this after completing deep computation chains to reclaim memory.
+    """
+    fhe = _get_fhe_engine()
+    if fhe is None:
+        return {'error': 'FHE engine not available', 'released': []}
+
+    released = fhe.release_bootstrap_keys()
+    return {
+        'released': released,
+        'keys_released_count': len(released),
+        'estimated_memory_freed_gb': 24.0 if released else 0.0,
+        'bootstrap_keys_loaded': fhe.bootstrap_keys_loaded,
+    }
+
+
+# =============================================================================
 # CIRCUIT DIAGRAM ENDPOINTS
 # =============================================================================
 
@@ -3981,8 +4305,20 @@ async def quantum_shor_circuit_diagram(n: int = 15):
         )
         transpiled = pm.run(qc)
 
+        # Save diagram PNG for persistence
+        saved_file = None
+        if diagram:
+            try:
+                from src.sector_quantum_circuit_benchmark import BenchmarkResultsManager
+                saved_file = BenchmarkResultsManager.save_circuit_diagram_png(
+                    diagram, f"shor_N{n}_a{base_a}"
+                )
+            except Exception:
+                pass
+
         return {
             "diagram": diagram,
+            "saved_file": saved_file,
             "circuit_info": {
                 "algorithm": "shor",
                 "N": n,
@@ -4031,8 +4367,20 @@ async def quantum_grover_circuit_diagram(qubits: int = 4):
         )
         transpiled = pm.run(qc)
 
+        # Save diagram PNG for persistence
+        saved_file = None
+        if diagram:
+            try:
+                from src.sector_quantum_circuit_benchmark import BenchmarkResultsManager
+                saved_file = BenchmarkResultsManager.save_circuit_diagram_png(
+                    diagram, f"grover_{qubits}q"
+                )
+            except Exception:
+                pass
+
         return {
             "diagram": diagram,
+            "saved_file": saved_file,
             "circuit_info": {
                 "algorithm": "grover",
                 "num_qubits": qubits,
@@ -4100,8 +4448,20 @@ async def quantum_ecc_circuit_diagram(field_bits: int = 4):
         )
         transpiled = pm.run(qc)
 
+        # Save diagram PNG for persistence
+        saved_file = None
+        if diagram:
+            try:
+                from src.sector_quantum_circuit_benchmark import BenchmarkResultsManager
+                saved_file = BenchmarkResultsManager.save_circuit_diagram_png(
+                    diagram, f"ecc_dlog_GF2_{field_bits}"
+                )
+            except Exception:
+                pass
+
         return {
             "diagram": diagram,
+            "saved_file": saved_file,
             "circuit_info": {
                 "algorithm": "ecc_discrete_log",
                 "field": f"GF(2^{field_bits})",
@@ -4117,6 +4477,68 @@ async def quantum_ecc_circuit_diagram(field_bits: int = 4):
         }
     except Exception as e:
         logger.error("ECC diagram generation failed: %s", e)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# =============================================================================
+# BENCHMARK RESULTS PERSISTENCE ENDPOINTS
+# =============================================================================
+
+@app.get("/benchmarks/results", tags=["Benchmark Results"])
+async def list_benchmark_results(limit: int = 50):
+    """
+    List saved benchmark result files (newest first).
+
+    Returns metadata (filename, size, modified timestamp) for each
+    stored JSON result file in data/benchmark_results/.
+    """
+    try:
+        from src.sector_quantum_circuit_benchmark import BenchmarkResultsManager
+        return {
+            'results': BenchmarkResultsManager.list_results(limit=limit),
+            'results_dir': str(BenchmarkResultsManager.RESULTS_DIR),
+        }
+    except Exception as e:
+        logger.error("List benchmark results failed: %s", e)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/benchmarks/results/{filename}", tags=["Benchmark Results"])
+async def get_benchmark_result(filename: str):
+    """
+    Retrieve a specific saved benchmark result by filename.
+
+    Includes path-traversal protection — only bare filenames accepted.
+    """
+    try:
+        from src.sector_quantum_circuit_benchmark import BenchmarkResultsManager
+        data = BenchmarkResultsManager.get_result(filename)
+        if data is None:
+            raise HTTPException(status_code=404, detail=f"Result not found: {filename}")
+        return data
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Get benchmark result %s failed: %s", filename, e)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/benchmarks/diagrams", tags=["Benchmark Results"])
+async def list_circuit_diagrams():
+    """
+    List saved circuit diagram PNG files (newest first).
+
+    Returns metadata (filename, size, modified timestamp) for each
+    stored PNG diagram file in data/circuit_diagrams/.
+    """
+    try:
+        from src.sector_quantum_circuit_benchmark import BenchmarkResultsManager
+        return {
+            'diagrams': BenchmarkResultsManager.list_diagrams(),
+            'diagrams_dir': str(BenchmarkResultsManager.DIAGRAMS_DIR),
+        }
+    except Exception as e:
+        logger.error("List circuit diagrams failed: %s", e)
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -4155,6 +4577,8 @@ def main():
     print("Shor Diagram: http://127.0.0.1:8000/quantum/circuit/shor-diagram?n=15")
     print("Grover Diagram: http://127.0.0.1:8000/quantum/circuit/grover-diagram?qubits=4")
     print("ECC Diagram: http://127.0.0.1:8000/quantum/circuit/ecc-diagram?field_bits=4")
+    print("Benchmark Results: http://127.0.0.1:8000/benchmarks/results")
+    print("Circuit Diagrams: http://127.0.0.1:8000/benchmarks/diagrams")
     print("\n" + "=" * 60 + "\n")
 
     uvicorn.run(

@@ -50,33 +50,30 @@ spec:
               value: {{ .Values.api.env.WORKERS | quote }}
             - name: CORS_ORIGINS
               value: {{ .Values.api.env.CORS_ORIGINS | quote }}
-            # PQC Configuration
+            # PQC Configuration (keys match configmap.yaml)
             - name: PQC_KEM_ALGORITHM
               valueFrom:
                 configMapKeyRef:
                   name: {{ include "pqc-fhe.fullname" . }}-config
-                  key: pqc-kem-algorithm
+                  key: PQC_KEM_ALGORITHM
             - name: PQC_SIGNATURE_ALGORITHM
               valueFrom:
                 configMapKeyRef:
                   name: {{ include "pqc-fhe.fullname" . }}-config
-                  key: pqc-signature-algorithm
+                  key: PQC_SIGNATURE_ALGORITHM
             # FHE Configuration
             - name: FHE_LOG_N
-              valueFrom:
-                configMapKeyRef:
-                  name: {{ include "pqc-fhe.fullname" . }}-config
-                  key: fhe-log-n
+              value: {{ .Values.crypto.fhe.logN | quote }}
             - name: FHE_SCALE_BITS
               valueFrom:
                 configMapKeyRef:
                   name: {{ include "pqc-fhe.fullname" . }}-config
-                  key: fhe-scale-bits
+                  key: FHE_SCALE_BITS
             - name: FHE_USE_BOOTSTRAP
               valueFrom:
                 configMapKeyRef:
                   name: {{ include "pqc-fhe.fullname" . }}-config
-                  key: fhe-use-bootstrap
+                  key: FHE_BOOTSTRAP_ENABLED
             # Redis Configuration
             {{- if .Values.redis.enabled }}
             - name: REDIS_HOST
@@ -162,6 +159,13 @@ spec:
         - name: gpu-worker
           image: "{{ .Values.gpuWorker.image.repository }}:{{ .Values.gpuWorker.image.tag }}"
           imagePullPolicy: {{ .Values.gpuWorker.image.pullPolicy }}
+          ports:
+            - name: grpc
+              containerPort: 50051
+              protocol: TCP
+            - name: health
+              containerPort: 8081
+              protocol: TCP
           env:
             - name: FHE_MODE
               value: "gpu"

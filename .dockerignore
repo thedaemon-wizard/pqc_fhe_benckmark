@@ -1,0 +1,66 @@
+# PQC-FHE Docker Build Ignore
+# Reduces build context size for faster builds
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Documentation (not needed in container)
+docs/
+*.md
+!README.md
+LICENSE
+
+# Tests
+tests/
+pytest.ini
+.coverage
+htmlcov/
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+
+# Container/Orchestration configs
+docker-compose*.yml
+Dockerfile*
+.dockerignore
+kubernetes/
+monitoring/
+Makefile
+mkdocs.yml
+
+# Node.js (from docs generation)
+node_modules/
+package*.json
+
+# Logs
+logs/
+*.log
+
+# Claude/IDE config
+.claude/
+.claude-worktrees/
+
+# Misc
+*.tmp
+*.bak
+*.orig

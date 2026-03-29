@@ -7,9 +7,9 @@
 # =============================================================================
 # Stage 1: Build liboqs from source
 # =============================================================================
-FROM python:3.11-slim as liboqs-builder
+FROM python:3.12-slim AS liboqs-builder
 
-# Install build dependencies
+# Install build dependencies (pkg-config required for OpenSSL detection)
 RUN apt-get update && apt-get install -y \
     cmake \
     gcc \
@@ -17,11 +17,12 @@ RUN apt-get update && apt-get install -y \
     git \
     ninja-build \
     libssl-dev \
+    pkg-config \
     && rm -rf /var/lib/apt/lists/*
 
 # Clone and build liboqs
 WORKDIR /build
-RUN git clone --depth 1 --branch 0.10.1 https://github.com/open-quantum-safe/liboqs.git && \
+RUN git clone --depth 1 --branch 0.14.0 https://github.com/open-quantum-safe/liboqs.git && \
     cd liboqs && \
     mkdir build && cd build && \
     cmake -GNinja \
@@ -35,11 +36,11 @@ RUN git clone --depth 1 --branch 0.10.1 https://github.com/open-quantum-safe/lib
 # =============================================================================
 # Stage 2: Production image
 # =============================================================================
-FROM python:3.11-slim as production
+FROM python:3.12-slim AS production
 
 # Labels
 LABEL maintainer="PQC-FHE Portfolio"
-LABEL version="1.0.0"
+LABEL version="3.5.0"
 LABEL description="Post-Quantum Cryptography + FHE REST API"
 
 # Environment variables
@@ -78,9 +79,13 @@ RUN pip install --no-cache-dir \
 
 # Copy application code
 COPY pqc_fhe_integration.py .
+COPY version.json .
 COPY api/ ./api/
+COPY src/ ./src/
+COPY web_ui/ ./web_ui/
 COPY benchmarks/ ./benchmarks/
 COPY examples/ ./examples/
+COPY data/ ./data/
 
 # Change ownership
 RUN chown -R appuser:appuser /app

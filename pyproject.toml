@@ -7,7 +7,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pqc-fhe-integration"
-version = "3.2.0"
+version = "3.5.0"
 description = "Post-Quantum Cryptography and Fully Homomorphic Encryption Integration Library"
 readme = "README.md"
 license = {text = "MIT"}

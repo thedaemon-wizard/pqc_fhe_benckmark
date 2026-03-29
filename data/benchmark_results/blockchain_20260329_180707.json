@@ -1,0 +1,626 @@
+{
+  "sector": "blockchain",
+  "sector_name": "Blockchain",
+  "timestamp": "2026-03-29T18:05:32.299887",
+  "gpu_backend": {
+    "gpu_available": true,
+    "gpu_device": "NVIDIA RTX PRO 6000 Blackwell Workstation Edition",
+    "cuda_driver": "580.105.08",
+    "max_qubits_gpu": 32,
+    "max_qubits_cpu": 28,
+    "backend_type": "GPU (cuStateVec)",
+    "vram_gb": 96,
+    "ram_gb": 128,
+    "supported_methods": [
+      "statevector",
+      "matrix_product_state",
+      "statevector_gpu"
+    ]
+  },
+  "qiskit_available": true,
+  "noise_backend": "ibm_torino",
+  "shor_circuits": {
+    "status": "completed",
+    "demo_circuits": [
+      {
+        "N": 15,
+        "factors_found": [
+          3,
+          5
+        ],
+        "success": true,
+        "num_qubits": 12,
+        "circuit_depth": 371,
+        "gate_count": {
+          "rz": 287,
+          "cx": 231,
+          "sx": 36,
+          "x": 23,
+          "measure": 8
+        },
+        "execution_time_ms": 41.475772857666016,
+        "shots": 4096,
+        "period_found": 4,
+        "optimization_info": {
+          "original_gates": 98,
+          "optimized_gates": 585,
+          "reduction_percent": -496.9,
+          "original_depth": 45,
+          "optimized_depth": 371,
+          "optimization_level": 2,
+          "method": "generate_preset_pass_manager",
+          "device": "GPU"
+        }
+      },
+      {
+        "N": 21,
+        "factors_found": [
+          3,
+          7
+        ],
+        "success": true,
+        "num_qubits": 15,
+        "circuit_depth": 5649,
+        "gate_count": {
+          "rz": 3244,
+          "cx": 2504,
+          "sx": 816,
+          "x": 111,
+          "measure": 10
+        },
+        "execution_time_ms": 205.52802085876465,
+        "shots": 4096,
+        "period_found": 6,
+        "optimization_info": {
+          "original_gates": 614,
+          "optimized_gates": 6685,
+          "reduction_percent": -988.8,
+          "original_depth": 291,
+          "optimized_depth": 5649,
+          "optimization_level": 2,
+          "method": "generate_preset_pass_manager",
+          "device": "GPU"
+        }
+      },
+      {
+        "N": 35,
+        "factors_found": [
+          5,
+          7
+        ],
+        "success": true,
+        "num_qubits": 18,
+        "circuit_depth": 1871,
+        "gate_count": {
+          "rz": 1218,
+          "cx": 963,
+          "sx": 298,
+          "x": 31,
+          "measure": 12
+        },
+        "execution_time_ms": 697.5963115692139,
+        "shots": 4096,
+        "period_found": 4,
+        "optimization_info": {
+          "original_gates": 286,
+          "optimized_gates": 2522,
+          "reduction_percent": -781.8,
+          "original_depth": 119,
+          "optimized_depth": 1871,
+          "optimization_level": 2,
+          "method": "generate_preset_pass_manager",
+          "device": "GPU"
+        }
+      }
+    ],
+    "sector_rsa_keys": [],
+    "extrapolation": {
+      "rsa_keys": []
+    },
+    "sector_implications": {
+      "demo_success_rate": "3/3",
+      "sector_uses_rsa": false,
+      "risk_level": "LOW",
+      "message": "Shor factoring demonstrated on 3/3 demo numbers. Sector blockchain does not use RSA for key exchange/signatures."
+    }
+  },
+  "ecc_dlog_circuits": {
+    "status": "completed",
+    "demo_result": {
+      "field": "GF(2^4)",
+      "field_order": 16,
+      "multiplicative_group_order": 15,
+      "total_qubits": 12,
+      "counting_qubits": 8,
+      "work_qubits": 4,
+      "circuit_depth": 56,
+      "gate_count": {
+        "rz": 80,
+        "cx": 64,
+        "sx": 16,
+        "measure": 8,
+        "x": 1
+      },
+      "shots": 4096,
+      "period_found": 4,
+      "success": false,
+      "top_measurements": [
+        {
+          "state": "00000000",
+          "count": 250,
+          "probability": 0.061
+        },
+        {
+          "state": "01000100",
+          "count": 126,
+          "probability": 0.0308
+        },
+        {
+          "state": "00100010",
+          "count": 114,
+          "probability": 0.0278
+        },
+        {
+          "state": "10001000",
+          "count": 112,
+          "probability": 0.0273
+        },
+        {
+          "state": "00111100",
+          "count": 105,
+          "probability": 0.0256
+        }
+      ],
+      "execution_time_ms": 23.3,
+      "extrapolation": {
+        "P-256": {
+          "field_bits": 256,
+          "estimated_qubits": 2330,
+          "estimated_toffoli_gates": 126000000000.0,
+          "estimated_circuit_depth": 23300000000.0,
+          "qubit_formula": "9*256 + 2*ceil(log2(256)) + 10 = 2330",
+          "threat_year_optimistic": 2031,
+          "threat_year_moderate": 2035,
+          "current_status": "SAFE (requires CRQC)"
+        },
+        "P-384": {
+          "field_bits": 384,
+          "estimated_qubits": 3484,
+          "estimated_toffoli_gates": 419000000000.0,
+          "estimated_circuit_depth": 52100000000.0,
+          "qubit_formula": "9*384 + 2*ceil(log2(384)) + 10 = 3484",
+          "threat_year_optimistic": 2033,
+          "threat_year_moderate": 2037,
+          "current_status": "SAFE (requires CRQC)"
+        },
+        "Ed25519": {
+          "field_bits": 255,
+          "estimated_qubits": 2321,
+          "estimated_toffoli_gates": 124000000000.0,
+          "estimated_circuit_depth": 23000000000.0,
+          "qubit_formula": "9*255 + 2*ceil(log2(255)) + 10 = 2321",
+          "threat_year_optimistic": 2031,
+          "threat_year_moderate": 2035,
+          "current_status": "SAFE (requires CRQC)"
+        },
+        "secp256k1": {
+          "field_bits": 256,
+          "estimated_qubits": 2330,
+          "estimated_toffoli_gates": 126000000000.0,
+          "estimated_circuit_depth": 23300000000.0,
+          "qubit_formula": "9*256 + 2*ceil(log2(256)) + 10 = 2330",
+          "threat_year_optimistic": 2031,
+          "threat_year_moderate": 2035,
+          "current_status": "SAFE (requires CRQC)"
+        }
+      },
+      "research_basis": {
+        "roetteler_2017": "Quantum resource estimates for ECC discrete log",
+        "arxiv_2503_02984": "Exact binary field gate counts (March 2025)",
+        "qubit_formula": "9n + 2*ceil(log2(n)) + 10 for n-bit curve"
+      },
+      "optimization_info": {
+        "original_gates": 65,
+        "optimized_gates": 169,
+        "reduction_percent": -160.0,
+        "original_depth": 20,
+        "optimized_depth": 56,
+        "optimization_level": 2,
+        "method": "generate_preset_pass_manager",
+        "device": "GPU"
+      }
+    },
+    "sector_ecc_algorithms": [
+      "ECDSA-256",
+      "Ed25519"
+    ],
+    "sector_implications": {
+      "sector_ecc_count": 2,
+      "risk_level": "CRITICAL",
+      "message": "ECC discrete log demonstrated on GF(2^4). Sector blockchain uses ECDSA-256, Ed25519 — vulnerable to quantum ECDLP. P-256 requires ~2330 qubits."
+    }
+  },
+  "grover_circuits": {
+    "status": "completed",
+    "demo_circuits": [
+      {
+        "num_qubits": 4,
+        "search_space": 16,
+        "target_found": "0000",
+        "success": 30.8515625,
+        "target_probability": 1.92822265625,
+        "classical_probability": 0.0625,
+        "speedup_factor": 30.85,
+        "circuit_depth": 167,
+        "gate_count": {
+          "rz": 116,
+          "cx": 84,
+          "sx": 28,
+          "measure": 4
+        },
+        "optimal_iterations": 3,
+        "actual_iterations": 3,
+        "execution_time_ms": 266.1252021789551,
+        "optimization_info": {
+          "original_gates": 98,
+          "optimized_gates": 232,
+          "reduction_percent": -136.7,
+          "original_depth": 38,
+          "optimized_depth": 167,
+          "optimization_level": 3,
+          "method": "generate_preset_pass_manager",
+          "device": "GPU"
+        }
+      },
+      {
+        "num_qubits": 8,
+        "search_space": 256,
+        "target_found": "11111100",
+        "success": 256.0,
+        "target_probability": 1.0,
+        "classical_probability": 0.00390625,
+        "speedup_factor": 256.0,
+        "circuit_depth": 6798,
+        "gate_count": {
+          "rz": 5356,
+          "cx": 4320,
+          "sx": 920,
+          "x": 179,
+          "measure": 8
+        },
+        "optimal_iterations": 12,
+        "actual_iterations": 12,
+        "execution_time_ms": 2714.5655155181885,
+        "optimization_info": {
+          "original_gates": 520,
+          "optimized_gates": 10783,
+          "reduction_percent": -1973.7,
+          "original_depth": 122,
+          "optimized_depth": 6798,
+          "optimization_level": 3,
+          "method": "generate_preset_pass_manager",
+          "device": "GPU"
+        }
+      },
+      {
+        "num_qubits": 12,
+        "search_space": 4096,
+        "target_found": "110100101101",
+        "success": 4095.0,
+        "target_probability": 0.999755859375,
+        "classical_probability": 0.000244140625,
+        "speedup_factor": 4095.0,
+        "circuit_depth": 110424,
+        "gate_count": {
+          "rz": 74074,
+          "cx": 56400,
+          "sx": 18612,
+          "x": 1298,
+          "measure": 12
+        },
+        "optimal_iterations": 50,
+        "actual_iterations": 50,
+        "execution_time_ms": 91055.71961402893,
+        "optimization_info": {
+          "original_gates": 3224,
+          "optimized_gates": 150396,
+          "reduction_percent": -4564.9,
+          "original_depth": 502,
+          "optimized_depth": 110424,
+          "optimization_level": 3,
+          "method": "generate_preset_pass_manager",
+          "device": "GPU"
+        }
+      }
+    ],
+    "sector_aes_algorithms": [
+      "AES-256"
+    ],
+    "extrapolation": {
+      "128": {
+        "qubits": 2953,
+        "toffoli_gates": 22300000000.0,
+        "t_depth": 30,
+        "effective_security_bits": 64,
+        "full_depth_width_reduction": "45.2% (CCQC 2025)"
+      },
+      "256": {
+        "qubits": 6681,
+        "toffoli_gates": 151000000000.0,
+        "t_depth": 62,
+        "effective_security_bits": 128,
+        "full_depth_width_reduction": "~40% (estimated)"
+      }
+    },
+    "sector_implications": {
+      "uses_aes128": false,
+      "uses_aes256": true,
+      "risk_level": "LOW",
+      "message": "Grover search demonstrated on small spaces. AES-256 remains secure (128-bit effective). Recommendation: AES-256 adequate.",
+      "aes128_extrapolation": {
+        "qubits": 2953,
+        "toffoli_gates": 22300000000.0,
+        "t_depth": 30,
+        "effective_security_bits": 64,
+        "full_depth_width_reduction": "45.2% (CCQC 2025)"
+      },
+      "aes256_extrapolation": {
+        "qubits": 6681,
+        "toffoli_gates": 151000000000.0,
+        "t_depth": 62,
+        "effective_security_bits": 128,
+        "full_depth_width_reduction": "~40% (estimated)"
+      }
+    }
+  },
+  "regev_comparison": {
+    "comparisons": [
+      {
+        "bit_size": 8,
+        "shor": {
+          "qubits": 19,
+          "gates": 13824,
+          "circuit_depth": 192,
+          "quantum_runs": 1,
+          "classical_post_processing": 512,
+          "algorithm": "Shor (1994, Gidney-Ekera 2021 optimization)"
+        },
+        "regev": {
+          "qubits": 48,
+          "gates": 2262,
+          "circuit_depth": 22,
+          "quantum_runs": 2,
+          "classical_post_processing": 181,
+          "algorithm": "Regev (2023, JACM 2025)"
+        },
+        "gate_ratio": 0.164,
+        "qubit_ratio": 2.526,
+        "advantage": "Regev"
+      },
+      {
+        "bit_size": 16,
+        "shor": {
+          "qubits": 35,
+          "gates": 73728,
+          "circuit_depth": 1024,
+          "quantum_runs": 1,
+          "classical_post_processing": 4096,
+          "algorithm": "Shor (1994, Gidney-Ekera 2021 optimization)"
+        },
+        "regev": {
+          "qubits": 128,
+          "gates": 6400,
+          "circuit_depth": 64,
+          "quantum_runs": 4,
+          "classical_post_processing": 1024,
+          "algorithm": "Regev (2023, JACM 2025)"
+        },
+        "gate_ratio": 0.087,
+        "qubit_ratio": 3.657,
+        "advantage": "Regev"
+      },
+      {
+        "bit_size": 32,
+        "shor": {
+          "qubits": 67,
+          "gates": 368640,
+          "circuit_depth": 5120,
+          "quantum_runs": 1,
+          "classical_post_processing": 32768,
+          "algorithm": "Shor (1994, Gidney-Ekera 2021 optimization)"
+        },
+        "regev": {
+          "qubits": 320,
+          "gates": 18101,
+          "circuit_depth": 181,
+          "quantum_runs": 5,
+          "classical_post_processing": 5792,
+          "algorithm": "Regev (2023, JACM 2025)"
+        },
+        "gate_ratio": 0.049,
+        "qubit_ratio": 4.776,
+        "advantage": "Regev"
+      },
+      {
+        "bit_size": 2048,
+        "shor": {
+          "qubits": 4099,
+          "gates": 3321888768,
+          "circuit_depth": 46137344,
+          "quantum_runs": 1,
+          "classical_post_processing": 8589934592,
+          "algorithm": "Shor (1994, Gidney-Ekera 2021 optimization)"
+        },
+        "regev": {
+          "qubits": 45056,
+          "gates": 9268190,
+          "circuit_depth": 92681,
+          "quantum_runs": 45,
+          "classical_post_processing": 189812531,
+          "algorithm": "Regev (2023, JACM 2025)"
+        },
+        "gate_ratio": 0.003,
+        "qubit_ratio": 10.992,
+        "advantage": "Regev"
+      },
+      {
+        "bit_size": 4096,
+        "shor": {
+          "qubits": 8195,
+          "gates": 14495514624,
+          "circuit_depth": 201326592,
+          "quantum_runs": 1,
+          "classical_post_processing": 68719476736,
+          "algorithm": "Shor (1994, Gidney-Ekera 2021 optimization)"
+        },
+        "regev": {
+          "qubits": 98304,
+          "gates": 26214400,
+          "circuit_depth": 262144,
+          "quantum_runs": 64,
+          "classical_post_processing": 1073741824,
+          "algorithm": "Regev (2023, JACM 2025)"
+        },
+        "gate_ratio": 0.002,
+        "qubit_ratio": 11.996,
+        "advantage": "Regev"
+      }
+    ],
+    "summary": {
+      "regev_gate_advantage_threshold": 8,
+      "regev_qubit_overhead": "O(n log n) vs O(n)",
+      "regev_quantum_runs": "O(sqrt(n)) independent runs",
+      "practical_status_2026": "Regev offers asymptotically better gate complexity but requires sqrt(n) independent quantum runs and O(n log n) qubits. As of 2026, Shor remains the practical standard for CRQC threat modeling."
+    },
+    "references": {
+      "regev_2023": "Regev, O. \"An Efficient Quantum Factoring Algorithm\"",
+      "jacm_2025": "JACM Jan 2025 publication",
+      "journal_cryptology_2026": "Practical analysis of Regev's algorithm"
+    }
+  },
+  "noise_analysis": {
+    "status": "completed",
+    "grover_under_noise": {
+      "sector": "blockchain",
+      "noise_profile": "ibm_ibm_torino",
+      "noise_description": "IBM Heron r1 (ibm_torino, 133 qubits) — fallback specs",
+      "circuit_type": "grover",
+      "num_qubits": 4,
+      "circuit_depth": 38,
+      "gate_count": {
+        "h": 40,
+        "x": 36,
+        "mcx": 6,
+        "measure": 4
+      },
+      "ideal_success_probability": 0.9636,
+      "sector_noise_probability": 0.8159,
+      "depolarizing_only_probability": 0.8667,
+      "fidelity_ratio": 0.8467,
+      "degradation_pct": 15.3,
+      "noise_parameters": {
+        "single_qubit_error": 0.0003,
+        "two_qubit_error": 0.005,
+        "readout_error": 0.015,
+        "T1_us": 160.0,
+        "T2_us": 100.0
+      },
+      "device": "GPU",
+      "execution_time_ms": 93.6,
+      "assessment": {
+        "severity": "MODERATE",
+        "description": "Some degradation — attack still viable with more shots",
+        "noise_profile_used": "ibm_ibm_torino",
+        "implication": "In blockchain sector (ibm_ibm_torino noise): quantum attack fidelity = 84.7%. Attack effective even with noise."
+      }
+    },
+    "qft_under_noise": {
+      "sector": "blockchain",
+      "noise_profile": "ibm_ibm_torino",
+      "noise_description": "IBM Heron r1 (ibm_torino, 133 qubits) — fallback specs",
+      "circuit_type": "shor_qft",
+      "num_qubits": 4,
+      "circuit_depth": 16,
+      "gate_count": {
+        "cp": 12,
+        "h": 8,
+        "measure": 4,
+        "x": 1
+      },
+      "ideal_success_probability": 1.0,
+      "sector_noise_probability": 0.926,
+      "depolarizing_only_probability": 0.9797,
+      "fidelity_ratio": 0.926,
+      "degradation_pct": 7.4,
+      "noise_parameters": {
+        "single_qubit_error": 0.0003,
+        "two_qubit_error": 0.005,
+        "readout_error": 0.015,
+        "T1_us": 160.0,
+        "T2_us": 100.0
+      },
+      "device": "GPU",
+      "execution_time_ms": 78.2,
+      "assessment": {
+        "severity": "LOW",
+        "description": "Noise impact minimal — quantum attack remains highly effective",
+        "noise_profile_used": "ibm_ibm_torino",
+        "implication": "In blockchain sector (ibm_ibm_torino noise): quantum attack fidelity = 92.6%. Attack effective even with noise."
+      }
+    },
+    "noise_profile": "datacenter",
+    "noise_backend": "ibm_torino",
+    "ibm_noise_comparison": {
+      "default_profile": {
+        "noise_profile": "datacenter",
+        "success_probability": 0.8657,
+        "fidelity_ratio": 0.9011
+      },
+      "ibm_qpu_profile": {
+        "noise_profile": "ibm_torino",
+        "success_probability": 0.8159,
+        "fidelity_ratio": 0.8467
+      }
+    }
+  },
+  "hndl_simulation": {
+    "sector": "blockchain",
+    "data_retention_years": 999,
+    "q_day_estimate": 2031,
+    "years_until_qday": 5,
+    "hndl_window_years": 994,
+    "hndl_risk": "CRITICAL",
+    "attack_sequence": [
+      "1. Data encrypted with ",
+      "2. Adversary harvests ciphertext (ongoing)",
+      "3. CRQC available ~2031 (5 years)",
+      "4. Shor circuit breaks RSA/ECC (demo: N=15 factored in real circuit)",
+      "5. Plaintext recovered (data valid for 999 more years)"
+    ],
+    "shor_proof_of_concept": {
+      "N": 15,
+      "factors": [
+        3,
+        5
+      ],
+      "success": true,
+      "qubits_used": 12,
+      "execution_time_ms": 46.68307304382324
+    },
+    "recommendation": "Sector blockchain: HNDL window = 994 years. IMMEDIATE migration to PQC required.",
+    "reference": "arXiv:2603.01091 (March 2026): Open-source HNDL testbed"
+  },
+  "execution_summary": {
+    "total_execution_time_ms": 95404.8,
+    "circuits_executed": 10,
+    "sector_risk_assessment": {
+      "overall_risk": "HIGH",
+      "risk_factors": [
+        "ECC vulnerable to discrete log attack",
+        "HNDL window: 994 years"
+      ],
+      "circuits_validated": true,
+      "recommendation": "Sector blockchain overall quantum risk: HIGH. Key risks: ECC vulnerable to discrete log attack; HNDL window: 994 years. Immediate PQC migration recommended."
+    }
+  }
+}

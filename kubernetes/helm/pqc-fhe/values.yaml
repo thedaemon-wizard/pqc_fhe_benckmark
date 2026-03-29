@@ -1,5 +1,6 @@
 # Default values for pqc-fhe.
 # This is a YAML-formatted file.
+# PQC-FHE Integration Platform v3.5.0 "Accurate Hardware Discovery"
 
 # =============================================================================
 # GLOBAL CONFIGURATION
@@ -16,24 +17,21 @@ global:
 api:
   # Replica count for API deployment
   replicaCount: 2
-  
+
+  # Container port (must match Dockerfile EXPOSE)
+  containerPort: 8000
+
   # Container image settings
   image:
     repository: pqc-fhe-api
     pullPolicy: IfNotPresent
-    tag: ""  # Defaults to Chart appVersion
-  
-  # Service account
-  serviceAccount:
-    create: true
-    annotations: {}
-    name: ""
-  
+    tag: ""  # Defaults to Chart appVersion (3.5.0)
+
   # Pod security context
   podSecurityContext:
     fsGroup: 1000
     runAsNonRoot: true
-  
+
   # Container security context
   securityContext:
     capabilities:
@@ -42,13 +40,35 @@ api:
     readOnlyRootFilesystem: true
     runAsNonRoot: true
     runAsUser: 1000
-  
+
   # Service configuration
   service:
     type: ClusterIP
     port: 8000
     annotations: {}
-  
+    # headless: false
+    # nodePort: 30080
+    # clusterIP: ""
+    # loadBalancerIP: ""
+    # loadBalancerSourceRanges: []
+    # sessionAffinity: None
+    # sessionAffinityConfig: {}
+
+  # Metrics configuration (Prometheus scraping)
+  metrics:
+    enabled: true
+    port: 9090
+    path: /metrics
+
+  # API configuration
+  workers: 4
+  timeout: 300
+
+  # Rate limiting
+  rateLimit:
+    enabled: true
+    requestsPerMinute: 60
+
   # Ingress configuration
   ingress:
     enabled: false
@@ -66,7 +86,7 @@ api:
       - secretName: pqc-fhe-tls
         hosts:
           - pqc-fhe.example.com
-  
+
   # Resource limits and requests
   resources:
     limits:
@@ -75,7 +95,7 @@ api:
     requests:
       cpu: 500m
       memory: 1Gi
-  
+
   # Autoscaling configuration
   autoscaling:
     enabled: true
@@ -83,13 +103,27 @@ api:
     maxReplicas: 10
     targetCPUUtilizationPercentage: 70
     targetMemoryUtilizationPercentage: 80
-  
+    # Custom metrics (Prometheus Adapter)
+    customMetrics: []
+    # Scale down behavior
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      podsPerMinute: 1
+      percentPerMinute: 10
+      selectPolicy: Min
+    # Scale up behavior
+    scaleUp:
+      stabilizationWindowSeconds: 0
+      podsPerMinute: 4
+      percentPerMinute: 100
+      selectPolicy: Max
+
   # Node selector
   nodeSelector: {}
-  
+
   # Tolerations
   tolerations: []
-  
+
   # Affinity rules
   affinity:
     podAntiAffinity:
@@ -103,13 +137,20 @@ api:
                   values:
                     - pqc-fhe-api
             topologyKey: kubernetes.io/hostname
-  
+
   # Environment variables
   env:
     LOG_LEVEL: INFO
     WORKERS: "4"
     CORS_ORIGINS: "*"
-  
+
+  # Pod Disruption Budget
+  podDisruptionBudget:
+    enabled: true
+    minAvailable: 1
+    # maxUnavailable: 1
+    # unhealthyPodEvictionPolicy: IfHealthy
+
   # Health check configuration
   healthCheck:
     livenessProbe:
@@ -135,31 +176,48 @@ api:
 gpuWorker:
   # Enable GPU worker deployment
   enabled: false
-  
+
   # Replica count
   replicaCount: 1
-  
+
   # Container image
   image:
     repository: pqc-fhe-api
     pullPolicy: IfNotPresent
     tag: "gpu"
-  
+
+  # Service account for GPU worker (separate for isolation)
+  serviceAccount:
+    create: true
+    annotations: {}
+    automount: false
+
+  # Metrics (Prometheus scraping for GPU worker)
+  metrics:
+    enabled: false
+    port: 9090
+
   # Resource limits (including GPU)
+  # Optimized for NVIDIA RTX 6000 PRO Blackwell (96GB VRAM)
   resources:
     limits:
       cpu: 4000m
-      memory: 16Gi
+      memory: 64Gi
       nvidia.com/gpu: 1
     requests:
       cpu: 2000m
       memory: 8Gi
       nvidia.com/gpu: 1
-  
+
   # Node selector for GPU nodes
   nodeSelector:
     accelerator: nvidia-gpu
-  
+
+  # Pod Disruption Budget for GPU workers
+  podDisruptionBudget:
+    enabled: true
+    maxUnavailable: 0
+
   # Tolerations for GPU nodes
   tolerations:
     - key: nvidia.com/gpu
@@ -167,42 +225,135 @@ gpuWorker:
       effect: NoSchedule
 
 # =============================================================================
+# APPLICATION CONFIGURATION
+# =============================================================================
+app:
+  environment: production
+  logLevel: INFO
+  logFormat: json
+
+# =============================================================================
+# SERVICE ACCOUNT CONFIGURATION (top-level, for API pods)
+# =============================================================================
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+  automount: false
+  imagePullSecrets: []
+
+# =============================================================================
+# RBAC CONFIGURATION
+# =============================================================================
+rbac:
+  create: true
+
+# =============================================================================
+# SECRETS CONFIGURATION
+# =============================================================================
+secrets:
+  # Create Kubernetes Secret resources
+  create: true
+
+  # Pre-set credentials (leave empty for auto-generation)
+  apiSecretKey: ""
+  jwtSecretKey: ""
+  storageEncryptionKey: ""
+  databaseUrl: ""
+  stringData: {}
+  externalServices: {}
+
+  # TLS certificate secret
+  tls:
+    enabled: false
+    cert: ""
+    key: ""
+    ca: ""
+
+  # PQC key material
+  pqcKeys:
+    enabled: true
+    masterKek: ""
+    kdSalt: ""
+
+  # Docker registry credentials
+  dockerRegistry:
+    enabled: false
+    server: ""
+    username: ""
+    password: ""
+    email: ""
+
+  # External Secrets Operator integration
+  externalSecretOperator:
+    enabled: false
+    refreshInterval: "1h"
+    secretStoreName: ""
+    secretStoreKind: ClusterSecretStore
+    keys: []
+
+# =============================================================================
 # CRYPTOGRAPHY CONFIGURATION
 # =============================================================================
 crypto:
-  # PQC Configuration
+  # PQC Configuration (NIST FIPS 203/204/205)
   pqc:
     kemAlgorithm: ML-KEM-768
+    kemSecurityLevel: 3
     signatureAlgorithm: ML-DSA-65
+    signatureSecurityLevel: 3
     securityLevel: 3  # 1=128-bit, 3=192-bit, 5=256-bit
-  
-  # FHE Configuration
+
+  # FHE Configuration (CKKS Scheme)
   fhe:
     logN: 15
+    polyModulusDegree: 32768  # 2^15
+    coeffModBitSizes: [60, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 60]
     scaleBits: 40
+    securityLevel: 128
     numScales: 60
     useBootstrap: true
+    bootstrapEnabled: true
+    bootstrapThreshold: 8
     mode: cpu  # cpu or gpu
-  
+
   # Key management
   keyManagement:
     rotationDays: 90
     backupEnabled: true
 
 # =============================================================================
+# CACHE CONFIGURATION
+# =============================================================================
+cache:
+  ttlSeconds: 3600
+  maxSizeMB: 512
+
+# =============================================================================
+# SECURITY CONFIGURATION
+# =============================================================================
+security:
+  keyRotation:
+    enabled: true
+    intervalHours: 168  # 7 days
+  audit:
+    enabled: true
+    retentionDays: 90
+
+# =============================================================================
 # REDIS CONFIGURATION
 # =============================================================================
 redis:
   enabled: true
-  
+
   # Architecture: standalone or replication
   architecture: standalone
-  
+
   # Authentication
   auth:
     enabled: true
     password: ""  # Auto-generated if empty
-  
+
   # Master configuration
   master:
     persistence:
@@ -221,37 +372,58 @@ redis:
 # =============================================================================
 prometheus:
   enabled: true
-  
+
   # Server configuration
   server:
     retention: 15d
     persistentVolume:
       enabled: true
       size: 50Gi
-  
+
   # Alertmanager
   alertmanager:
     enabled: true
-  
+
   # Push gateway (for batch jobs)
   pushgateway:
     enabled: false
+
+  # ServiceMonitor (for Prometheus Operator CRD-based service discovery)
+  serviceMonitor:
+    enabled: false
+    namespace: ""
+    interval: 30s
+    scrapeTimeout: 10s
+    labels: {}
+    honorLabels: false
+    honorTimestamps: false
+    metricRelabelings: []
+    relabelings: []
+    tlsConfig: {}
+    bearerTokenSecret: {}
+
+  # PrometheusRule (for alerting rules)
+  prometheusRule:
+    enabled: false
+    namespace: ""
+    labels: {}
+    additionalRules: []
 
 # =============================================================================
 # GRAFANA CONFIGURATION
 # =============================================================================
 grafana:
   enabled: true
-  
+
   # Admin credentials
   adminUser: admin
   adminPassword: ""  # Auto-generated if empty
-  
+
   # Persistence
   persistence:
     enabled: true
     size: 10Gi
-  
+
   # Datasources
   datasources:
     datasources.yaml:
@@ -273,7 +445,7 @@ persistence:
     storageClass: ""
     accessMode: ReadWriteOnce
     size: 1Gi
-  
+
   # Cache storage
   cache:
     enabled: true
@@ -286,14 +458,29 @@ persistence:
 # =============================================================================
 networkPolicy:
   enabled: true
-  
+
   # Allow ingress from specified namespaces
   allowedNamespaces:
     - default
     - kube-system
-  
+
   # Allow specific CIDR blocks
   allowedCIDRs: []
+
+  # Allow external HTTPS egress (for IBM Quantum API, etc.)
+  allowExternalHTTPS: true
+
+  # Kubelet CIDR for health checks (0.0.0.0/0 allows all)
+  kubeletCIDR: "0.0.0.0/0"
+
+  # Ingress controller configuration
+  ingressController:
+    namespaceSelector: {}
+    podSelector: {}
+
+  # Prometheus namespace selector
+  prometheus:
+    namespaceSelector: {}
 
 # =============================================================================
 # POD DISRUPTION BUDGET

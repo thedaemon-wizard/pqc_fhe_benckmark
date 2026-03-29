@@ -1,5 +1,5 @@
 """
-PQC-FHE Integration Library v3.2.0
+PQC-FHE Integration Library v3.5.0
 ==================================
 
 Enterprise-grade Post-Quantum Cryptography + Fully Homomorphic Encryption Integration

@@ -38,8 +38,10 @@ Version: 3.2.0
 
 import math
 import time
+import json
 import logging
 import random
+from pathlib import Path
 from typing import Dict, Any, List, Optional, Tuple
 from datetime import datetime
 
@@ -366,6 +368,17 @@ class EnhancedNoiseSimulator:
             'gate_time_cx_ns': 150.0,
             'correlated_error_prob': 1e-4,
         },
+        'ibm_heron_r2': {
+            'description': 'IBM Heron r2 processor (ibm_fez, 156 qubits, CZ-based)',
+            'single_qubit_error': 2.4e-4,
+            'two_qubit_error': 3.8e-3,
+            'thermal_relaxation_t1_us': 250.0,
+            'thermal_relaxation_t2_us': 150.0,
+            'readout_error_prob': 1.2e-2,
+            'gate_time_single_ns': 60.0,
+            'gate_time_cx_ns': 84.0,
+            'source': 'ibm_heron_r2_specs',
+        },
     }
 
     SECTOR_NOISE_MAPPING: Dict[str, str] = {
@@ -399,6 +412,7 @@ class EnhancedNoiseSimulator:
         sector: str,
         circuit_type: str = 'grover',
         num_qubits: int = 4,
+        noise_backend: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
         Run quantum circuit under sector-specific noise profile.
@@ -407,12 +421,31 @@ class EnhancedNoiseSimulator:
             sector: Sector name (healthcare, finance, iot, blockchain, mpc-fhe)
             circuit_type: 'grover' or 'shor_qft'
             num_qubits: Number of qubits (3-10 recommended)
+            noise_backend: Optional IBM QPU backend name for noise comparison
+                          (e.g., 'ibm_fez', 'ibm_heron_r2')
 
         Returns:
             Dict with ideal vs noisy comparison under sector noise profile
         """
-        noise_profile_name = self.SECTOR_NOISE_MAPPING.get(sector, 'datacenter')
-        profile = self.NOISE_PROFILES[noise_profile_name]
+        # Determine noise profile: use IBM QPU profile or sector default
+        if noise_backend and noise_backend != 'default':
+            if noise_backend in self.NOISE_PROFILES:
+                noise_profile_name = noise_backend
+                profile = self.NOISE_PROFILES[noise_backend]
+            else:
+                # Try to fetch from IBMQuantumBackendManager (singleton)
+                try:
+                    from src.ibm_quantum_backend import get_ibm_manager
+                    ibm_mgr = get_ibm_manager()
+                    profile = ibm_mgr.get_noise_profile_for_sector(noise_backend)
+                    noise_profile_name = f'ibm_{noise_backend}'
+                except Exception as e:
+                    logger.warning(f"Failed to fetch IBM QPU profile for {noise_backend}: {e}")
+                    noise_profile_name = self.SECTOR_NOISE_MAPPING.get(sector, 'datacenter')
+                    profile = self.NOISE_PROFILES[noise_profile_name]
+        else:
+            noise_profile_name = self.SECTOR_NOISE_MAPPING.get(sector, 'datacenter')
+            profile = self.NOISE_PROFILES[noise_profile_name]
 
         num_qubits = max(3, min(num_qubits, 10))
 
@@ -495,8 +528,16 @@ class EnhancedNoiseSimulator:
         error_1q = depolarizing_error(profile['single_qubit_error'], 1)
         noise_model.add_all_qubit_quantum_error(error_1q, ['h', 'x', 'z', 's', 't', 'rx', 'ry', 'rz'])
 
+        # Determine 2Q gate list from basis_gates if available
+        basis_gates = profile.get('basis_gates', [])
+        proc_family = profile.get('processor_family', '')
+        two_q_gates = [g for g in basis_gates if g in ('cz', 'ecr', 'cx')] if basis_gates else []
+        if not two_q_gates:
+            # Default: include common 2Q gates
+            two_q_gates = ['cx', 'cz']
+
         error_2q = depolarizing_error(min(profile['two_qubit_error'], 0.75), 2)
-        noise_model.add_all_qubit_quantum_error(error_2q, ['cx', 'cp', 'cz'])
+        noise_model.add_all_qubit_quantum_error(error_2q, two_q_gates + ['cp'])
 
         # Thermal relaxation
         if NOISE_MODELS_AVAILABLE:
@@ -1044,7 +1085,9 @@ class SectorCircuitBenchmarkRunner:
 
         self._regev_demo = RegevAlgorithmDemo()
 
-    def run_sector_circuit_benchmark(self, sector: str) -> Dict[str, Any]:
+    def run_sector_circuit_benchmark(
+        self, sector: str, noise_backend: Optional[str] = None
+    ) -> Dict[str, Any]:
         """
         Run complete real quantum circuit benchmark for a specific sector.
 
@@ -1053,6 +1096,8 @@ class SectorCircuitBenchmarkRunner:
 
         Args:
             sector: One of 'healthcare', 'finance', 'blockchain', 'iot', 'mpc-fhe'
+            noise_backend: Optional IBM QPU backend name for noise comparison
+                          (e.g., 'ibm_fez', 'ibm_heron_r2')
 
         Returns:
             Comprehensive benchmark results with real circuit execution data
@@ -1069,11 +1114,12 @@ class SectorCircuitBenchmarkRunner:
             'timestamp': datetime.now().isoformat(),
             'gpu_backend': self._gpu.get_capabilities(),
             'qiskit_available': QISKIT_AVAILABLE,
+            'noise_backend': noise_backend or 'default',
             'shor_circuits': self._run_shor_circuits(sector, profile),
             'ecc_dlog_circuits': self._run_ecc_circuits(sector, profile),
             'grover_circuits': self._run_grover_circuits(sector, profile),
             'regev_comparison': self._run_regev_comparison(),
-            'noise_analysis': self._run_noise_analysis(sector),
+            'noise_analysis': self._run_noise_analysis(sector, noise_backend),
             'hndl_simulation': self._run_hndl_demo(sector, profile),
             'execution_summary': {},
         }
@@ -1084,6 +1130,12 @@ class SectorCircuitBenchmarkRunner:
             'circuits_executed': self._count_circuits(results),
             'sector_risk_assessment': self._assess_sector_risk(sector, results),
         }
+
+        # Persist result to file for later retrieval
+        try:
+            BenchmarkResultsManager.save_benchmark_result(results)
+        except Exception as e:
+            logger.warning("Could not persist benchmark result: %s", e)
 
         return results
 
@@ -1230,7 +1282,9 @@ class SectorCircuitBenchmarkRunner:
         except Exception as e:
             return {'error': str(e)}
 
-    def _run_noise_analysis(self, sector: str) -> Dict[str, Any]:
+    def _run_noise_analysis(
+        self, sector: str, noise_backend: Optional[str] = None
+    ) -> Dict[str, Any]:
         """Run sector-specific noise analysis on quantum circuits."""
         if self._noise_sim is None:
             return {
@@ -1240,17 +1294,43 @@ class SectorCircuitBenchmarkRunner:
 
         try:
             grover_noise = self._noise_sim.run_sector_noise_profile(
-                sector, circuit_type='grover', num_qubits=4
+                sector, circuit_type='grover', num_qubits=4,
+                noise_backend=noise_backend,
             )
             qft_noise = self._noise_sim.run_sector_noise_profile(
-                sector, circuit_type='shor_qft', num_qubits=4
+                sector, circuit_type='shor_qft', num_qubits=4,
+                noise_backend=noise_backend,
             )
-            return {
+            result = {
                 'status': 'completed',
                 'grover_under_noise': grover_noise,
                 'qft_under_noise': qft_noise,
                 'noise_profile': EnhancedNoiseSimulator.SECTOR_NOISE_MAPPING.get(sector),
+                'noise_backend': noise_backend or 'default',
             }
+
+            # If IBM QPU noise backend specified, add comparison with default profile
+            if noise_backend and noise_backend != 'default':
+                try:
+                    default_grover = self._noise_sim.run_sector_noise_profile(
+                        sector, circuit_type='grover', num_qubits=4,
+                    )
+                    result['ibm_noise_comparison'] = {
+                        'default_profile': {
+                            'noise_profile': EnhancedNoiseSimulator.SECTOR_NOISE_MAPPING.get(sector),
+                            'success_probability': default_grover.get('sector_noise_probability', 0),
+                            'fidelity_ratio': default_grover.get('fidelity_ratio', 0),
+                        },
+                        'ibm_qpu_profile': {
+                            'noise_profile': noise_backend,
+                            'success_probability': grover_noise.get('sector_noise_probability', 0),
+                            'fidelity_ratio': grover_noise.get('fidelity_ratio', 0),
+                        },
+                    }
+                except Exception:
+                    pass  # Comparison is optional
+
+            return result
         except Exception as e:
             return {'status': 'error', 'error': str(e)}
 
@@ -1475,9 +1555,13 @@ class SectorCircuitBenchmarkRunner:
             count += 1
         return count
 
-    def run_all_sectors(self) -> Dict[str, Any]:
+    def run_all_sectors(self, noise_backend: Optional[str] = None) -> Dict[str, Any]:
         """
         Run circuit benchmarks for all 5 sectors.
+
+        Args:
+            noise_backend: Optional IBM QPU backend name for noise comparison
+                          (e.g., 'ibm_fez', 'ibm_heron_r2'). Applied to all sectors.
 
         Returns comprehensive cross-sector comparison.
         """
@@ -1486,7 +1570,9 @@ class SectorCircuitBenchmarkRunner:
 
         for sector in VALID_SECTORS:
             try:
-                sector_results[sector] = self.run_sector_circuit_benchmark(sector)
+                sector_results[sector] = self.run_sector_circuit_benchmark(
+                    sector, noise_backend=noise_backend
+                )
             except Exception as e:
                 sector_results[sector] = {
                     'sector': sector,
@@ -1499,13 +1585,22 @@ class SectorCircuitBenchmarkRunner:
         # Cross-sector comparison
         comparison = self._build_cross_sector_comparison(sector_results)
 
-        return {
+        all_result = {
             'timestamp': datetime.now().isoformat(),
             'total_execution_time_ms': round(total_time, 1),
             'gpu_backend': self._gpu.get_capabilities(),
+            'noise_backend': noise_backend or 'default',
             'sectors': sector_results,
             'cross_sector_comparison': comparison,
         }
+
+        # Persist all-sector result to file for later retrieval
+        try:
+            BenchmarkResultsManager.save_benchmark_result(all_result, prefix='all_')
+        except Exception as e:
+            logger.warning("Could not persist all-sector benchmark result: %s", e)
+
+        return all_result
 
     def _build_cross_sector_comparison(
         self, sector_results: Dict[str, Dict]
@@ -1537,6 +1632,157 @@ class SectorCircuitBenchmarkRunner:
             'total_circuits_executed': sum(r['circuits_executed'] for r in risk_ranking),
             'migration_priority': [r['sector'] for r in risk_ranking],
         }
+
+
+# =============================================================================
+# BENCHMARK RESULTS MANAGER — Persistent storage for results and diagrams
+# =============================================================================
+
+class BenchmarkResultsManager:
+    """
+    Persistent storage manager for benchmark results and circuit diagrams.
+
+    Saves benchmark results as timestamped JSON files and circuit diagrams as
+    PNG files for later retrieval and display in the Web UI.
+
+    Storage layout:
+        data/benchmark_results/   — JSON result files
+        data/circuit_diagrams/    — PNG circuit diagram files
+    """
+
+    RESULTS_DIR = Path(__file__).resolve().parent.parent / 'data' / 'benchmark_results'
+    DIAGRAMS_DIR = Path(__file__).resolve().parent.parent / 'data' / 'circuit_diagrams'
+
+    @classmethod
+    def ensure_dirs(cls) -> None:
+        """Create storage directories if they don't exist."""
+        cls.RESULTS_DIR.mkdir(parents=True, exist_ok=True)
+        cls.DIAGRAMS_DIR.mkdir(parents=True, exist_ok=True)
+
+    @classmethod
+    def save_benchmark_result(cls, result: Dict[str, Any], prefix: str = '') -> str:
+        """
+        Save a benchmark result dict as a timestamped JSON file.
+
+        Args:
+            result: Benchmark result dictionary (from run_sector_circuit_benchmark
+                    or run_all_sectors).
+            prefix: Optional filename prefix (e.g. 'all_' for all-sector runs).
+
+        Returns:
+            The filename of the saved JSON file.
+        """
+        cls.ensure_dirs()
+        ts = datetime.now().strftime('%Y%m%d_%H%M%S')
+        sector = result.get('sector', 'multi')
+        filename = f"{prefix}{sector}_{ts}.json"
+        filepath = cls.RESULTS_DIR / filename
+        try:
+            with open(filepath, 'w', encoding='utf-8') as f:
+                json.dump(result, f, indent=2, default=str, ensure_ascii=False)
+            logger.info("Saved benchmark result: %s", filename)
+        except Exception as e:
+            logger.error("Failed to save benchmark result %s: %s", filename, e)
+        return filename
+
+    @classmethod
+    def save_circuit_diagram_png(cls, base64_data_uri: str, name: str) -> Optional[str]:
+        """
+        Save a base64 data-URI circuit diagram as a PNG file.
+
+        Args:
+            base64_data_uri: Full data URI string (data:image/png;base64,…).
+            name: Descriptive name used in the filename (e.g. 'shor_N15').
+
+        Returns:
+            The filename of the saved PNG, or None on failure.
+        """
+        if not base64_data_uri or not base64_data_uri.startswith('data:image/png;base64,'):
+            return None
+        cls.ensure_dirs()
+        import base64 as b64mod
+        ts = datetime.now().strftime('%Y%m%d_%H%M%S')
+        safe_name = "".join(c if c.isalnum() or c in ('_', '-') else '_' for c in name)
+        filename = f"{safe_name}_{ts}.png"
+        filepath = cls.DIAGRAMS_DIR / filename
+        try:
+            raw = base64_data_uri.split(',', 1)[1]
+            with open(filepath, 'wb') as f:
+                f.write(b64mod.b64decode(raw))
+            logger.info("Saved circuit diagram: %s", filename)
+            return filename
+        except Exception as e:
+            logger.error("Failed to save circuit diagram %s: %s", filename, e)
+            return None
+
+    @classmethod
+    def list_results(cls, limit: int = 50) -> List[Dict[str, Any]]:
+        """
+        List saved benchmark result files (newest first).
+
+        Args:
+            limit: Maximum number of entries to return.
+
+        Returns:
+            List of dicts with 'filename', 'size_bytes', 'modified' keys.
+        """
+        cls.ensure_dirs()
+        entries = []
+        for p in sorted(cls.RESULTS_DIR.glob('*.json'), key=lambda x: x.stat().st_mtime, reverse=True):
+            entries.append({
+                'filename': p.name,
+                'size_bytes': p.stat().st_size,
+                'modified': datetime.fromtimestamp(p.stat().st_mtime).isoformat(),
+            })
+            if len(entries) >= limit:
+                break
+        return entries
+
+    @classmethod
+    def get_result(cls, filename: str) -> Optional[Dict[str, Any]]:
+        """
+        Load a specific benchmark result by filename.
+
+        Includes path-traversal protection — only bare filenames accepted.
+
+        Args:
+            filename: The JSON filename (no directory components).
+
+        Returns:
+            Parsed JSON dict, or None if not found / invalid.
+        """
+        # Path-traversal defence
+        safe = Path(filename).name
+        if safe != filename or '..' in filename:
+            logger.warning("Path-traversal attempt blocked: %s", filename)
+            return None
+        filepath = cls.RESULTS_DIR / safe
+        if not filepath.is_file():
+            return None
+        try:
+            with open(filepath, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except Exception as e:
+            logger.error("Failed to load benchmark result %s: %s", filename, e)
+            return None
+
+    @classmethod
+    def list_diagrams(cls) -> List[Dict[str, Any]]:
+        """
+        List saved circuit diagram PNG files (newest first).
+
+        Returns:
+            List of dicts with 'filename', 'size_bytes', 'modified' keys.
+        """
+        cls.ensure_dirs()
+        entries = []
+        for p in sorted(cls.DIAGRAMS_DIR.glob('*.png'), key=lambda x: x.stat().st_mtime, reverse=True):
+            entries.append({
+                'filename': p.name,
+                'size_bytes': p.stat().st_size,
+                'modified': datetime.fromtimestamp(p.stat().st_mtime).isoformat(),
+            })
+        return entries
 
 
 # =============================================================================
