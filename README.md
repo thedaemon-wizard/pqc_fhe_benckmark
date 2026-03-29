@@ -13,7 +13,6 @@ Production-ready framework combining **Post-Quantum Cryptography (PQC)** with **
 
 - [Technical Report v3.5.0 (PDF)](docs/PQC_FHE_Technical_Report_v3.5.0_Enterprise.pdf)
 - [Technical Report v3.5.0 (Word)](docs/PQC_FHE_Technical_Report_v3.5.0_Enterprise.docx)
-- [Technical Report v3.2.0 (PDF)](docs/PQC_FHE_Technical_Report_v3.2.0_Enterprise.pdf)
 - [CHANGELOG](CHANGELOG.md)
 - [Summary Page(infographic)](https://thedaemon-wizard.github.io/pqc_fhe_benckmark/infographic.html)
 
