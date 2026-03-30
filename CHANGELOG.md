@@ -47,6 +47,17 @@ All notable changes to the PQC-FHE Integration Platform.
 - **Helm chart validated**: `helm lint` passed, `helm template` renders 8 manifests (Deployment, Service, Ingress, HPA, NetworkPolicy, ServiceAccount, Role, RoleBinding)
 - **Dockerfile.gpu**: CUDA 12.2 + liboqs 0.14.0 multi-stage GPU build available
 
+### Documentation
+- **Technical Report v3.5.0**: Comprehensive 44-page report (python-docx, `docs/generate_v350_report.py`, 1,778 lines)
+  - 21 major sections, 50 tables, 68+ references organized by 9 categories
+  - Carries forward all v3.2.0 content (BKZ, quantum sieve, Shor multi-era, side-channel, CKKS/FHE)
+  - Adds v3.3.0-v3.5.0 content (IBM QPU, FHE bootstrap, benchmark persistence, 2026 research)
+  - Platform validation section with academic justification for small-qubit demonstrations
+  - Infrastructure section (Docker 420MB, Prometheus 9 metrics, Helm 8 manifests)
+  - DOCX (69KB) + PDF via LibreOffice (183KB, 44 pages)
+- **Infographic updated**: v3.5.0 with Heron r1/r2 distinction, 2026 research cards, 90 API routes
+- **README.md updated**: Platform Validation section, IBM QPU corrections, 8 new references [33]-[40]
+
 ### Changed
 - `ibm_torino` noise parameters: T1 250→160µs, T2 150→100µs, 1Q error 2.4e-4→3.0e-4, 2Q error 3.8e-3→5.0e-3
 - `run_sector_circuit_benchmark()` and `run_all_sectors()` now auto-save results to disk
