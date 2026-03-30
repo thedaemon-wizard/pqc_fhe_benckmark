@@ -266,7 +266,7 @@ Production-ready framework combining **Post-Quantum Cryptography (PQC)** with **
 - **JVG Algorithm (Mar 2026)**: DISMISSED — no valid quantum speedup demonstrated.
 
 #### Browser-Verified (March 2026)
-- **206 tests** all passing (Python 3.12.11, Qiskit 2.3.1, Aer 0.17.2, qiskit-ibm-runtime 0.46.1)
+- **238 tests** all passing (Python 3.12.11, Qiskit 2.3.1, Aer 0.17.2, qiskit-ibm-runtime 0.46.1)
 - Healthcare (7), Finance (8), IoT (6), Blockchain (7), MPC-FHE (7) circuit benchmarks — all **🟢 GPU accelerated**
 - Shor N=15/21/35/143/221, Grover 4-16 qubit, ECC GF(2^4) — all on `AerSimulator(device='GPU')`
 - **GPU backend**: NVIDIA RTX PRO 6000 Blackwell 96GB via cuStateVec — ~25% speedup (Healthcare: 119.9s→89.5s)
@@ -687,8 +687,9 @@ pqc_fhe_benckmark/
 ├── web_ui/
 │   └── index.html             # React Web UI (9 tabs)
 ├── docs/
-│   ├── PQC_FHE_Technical_Report_v3.5.0_Enterprise.docx
-│   ├── PQC_FHE_Technical_Report_v3.5.0_Enterprise.pdf
+│   ├── PQC_FHE_Technical_Report_v3.5.0_Enterprise.docx  # 44-page report (69KB)
+│   ├── PQC_FHE_Technical_Report_v3.5.0_Enterprise.pdf   # PDF version (183KB)
+│   ├── generate_v350_report.py  # Report generator (python-docx, 1778 lines)
 │   └── infographic.html       # Project infographic (v3.5.0)
 ├── data/
 │   ├── ibm_backends_cache.json # [v3.5.0] Dynamic QPU backend cache (6 backends)
